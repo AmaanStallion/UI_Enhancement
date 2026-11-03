@@ -1,0 +1,29 @@
+# Set default behavior to automatically normalize line endings.
+* text=auto
+
+# Force LF line endings for source code files
+*.dart text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.gradle text eol=lf
+*.xml text eol=lf
+*.md text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+# Force CRLF for batch files if any
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Denote binary files (so git won't try to change their line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.otf binary
+*.ttf binary
+*.aar binary
+*.jar binary

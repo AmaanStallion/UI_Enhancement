@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stallion Notification Debugger</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Socket.io Client -->
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-base: #0b0f19;
+      --bg-surface: #151b2c;
+      --bg-element: #1e263d;
+      --border-color: #2e3b5e;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #d946ef;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', Courier, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    /* Premium Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-base);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid;
+    }
+
+    .badge-primary {
+      background-color: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.3);
+      color: var(--primary);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: 350px 1fr;
+      }
+    }
+
+    .card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background-color: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem;
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    button {
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button.btn-accent {
+      background-color: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    
+    button.btn-accent:hover {
+      background-color: rgba(217, 70, 239, 0.1);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background-color: var(--bg-base);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+    }
+
+    .dot-online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot-offline { background-color: var(--error); box-shadow: 0 0 8px var(--error); }
+    .dot-warning { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+    /* Tabs Panel Layout */
+    .tabs-header {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      width: auto;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      background-color: rgba(99, 102, 241, 0.08);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .logs-panel {
+      background-color: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      height: 500px;
+      overflow-y: auto;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .log-item {
+      padding: 0.75rem;
+      border-radius: 6px;
+      border-left: 4px solid;
+      background-color: rgba(255, 255, 255, 0.01);
+      border-color: var(--border-color);
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .log-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .log-socket { border-color: var(--primary); }
+    .log-socket .log-type { color: var(--primary); }
+    .log-api { border-color: var(--accent); }
+    .log-api .log-type { color: var(--accent); }
+    .log-fcm { border-color: var(--warning); }
+    .log-fcm .log-type { color: var(--warning); }
+    .log-error { border-color: var(--error); }
+    .log-error .log-type { color: var(--error); }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      color: #38bdf8;
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .clear-btn {
+      width: auto;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    .clear-btn:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background-color: rgba(239, 68, 68, 0.05);
+    }
+
+    .inline-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    /* Guide & Instructions Styles */
+    .guide-container {
+      max-height: 500px;
+      overflow-y: auto;
+      padding-right: 0.5rem;
+    }
+
+    .step-card {
+      background-color: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 0.5rem;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-left: 2rem;
+    }
+
+    .step-desc ul {
+      margin-top: 0.5rem;
+      margin-left: 1.25rem;
+    }
+
+    .step-desc li {
+      margin-bottom: 0.25rem;
+    }
+
+    .code-snippet {
+      font-family: var(--font-mono);
+      background-color: var(--bg-base);
+      color: #38bdf8;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <h1>Stallion Notification Hub</h1>
+      <span class="badge badge-primary">Debugger v2.1</span>
+    </div>
+    <div style="font-size: 0.9rem; color: var(--text-muted);">
+      Local Time: <span id="current-time">11:21 AM</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Configuration Sidebar -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        Environment Configuration
+      </div>
+
+      <div class="form-group">
+        <label for="api-url">API Base URL</label>
+        <input type="text" id="api-url" value="https://api.dev.batman.co.in/api/v1/" placeholder="Enter API base URL">
+      </div>
+
+      <div class="form-group">
+        <label for="socket-url">Socket.io URL</label>
+        <input type="text" id="socket-url" value="https://api.dev.batman.co.in" placeholder="Enter Socket URL">
+      </div>
+
+      <div class="form-group">
+        <label for="auth-token">Bearer Auth Token</label>
+        <textarea id="auth-token" rows="4" placeholder="Paste user login JWT token here..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="device-token">Device Registration Token (FCM)</label>
+        <input type="text" id="device-token" placeholder="Optional: FCM Token for device tests">
+      </div>
+
+      <button id="connect-socket-btn">Connect Socket.io</button>
+
+      <div class="status-indicator">
+        <div id="status-dot" class="dot"></div>
+        <span>Socket: <strong id="status-text">Disconnected</strong></span>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="card">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('logs')">Unified Logs</button>
+        <button class="tab-btn" onclick="switchTab('api')">Notifications API</button>
+        <button class="tab-btn" onclick="switchTab('fcm')">Trigger Test Push (FCM)</button>
+        <button class="tab-btn" onclick="switchTab('instructions')">Testing Instructions</button>
+      </div>
+
+      <!-- Logs Tab -->
+      <div id="tab-logs" class="tab-content active">
+        <div class="action-row">
+          <div style="font-size: 0.9rem; color: var(--text-muted);">
+            Monitoring incoming notifications across WebSockets, API calls, and local simulations.
+          </div>
+          <button class="clear-btn" onclick="clearLogs()">Clear Console</button>
+        </div>
+        <div id="logs-container" class="logs-panel">
+          <div class="log-item" style="border-left-color: var(--primary);">
+            <div class="log-time">System Init</div>
+            <div class="log-meta">
+              <span class="log-type">INFO</span>
+              <span>Hub initialized</span>
+            </div>
+            <div>Paste your backend URL and Auth token in the sidebar to begin checking logs. Check the <strong>Testing Instructions</strong> tab for a full walkthrough.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications API Tab -->
+      <div id="tab-api" class="tab-content">
+        <div class="form-group">
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Query the notification history list directly from your backend endpoints to verify pagination and response structures.
+          </p>
+          <div style="display: flex; gap: 1rem;">
+            <button id="fetch-api-btn" style="flex: 1;">Fetch GET /notifications</button>
+            <button id="read-all-btn" class="btn-accent" style="flex: 1;">Mark All Read (PUT)</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>API Responses</label>
+          <div id="api-output" class="logs-panel" style="height: 380px;">
+            <div class="log-item">Click the button above to fetch notifications...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FCM Trigger Tab -->
+      <div id="tab-fcm" class="tab-content">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Dispatch a manual FCM message to trigger a remote notification banner on your physical phone or tablet using Firebase REST API.
+        </p>
+
+        <div class="form-group">
+          <label for="fcm-server-key">FCM Server Key (Legacy Key)</label>
+          <input type="password" id="fcm-server-key" placeholder="Paste your Firebase Legacy Server Key here...">
+        </div>
+
+        <div class="inline-group">
+          <div class="form-group">
+            <label for="fcm-title">Title</label>
+            <input type="text" id="fcm-title" value="Test Alert">
+          </div>
+          <div class="form-group">
+            <label for="fcm-type">Module type</label>
+            <select id="fcm-type">
+              <option value="legal">Legal Module (/legal)</option>
+              <option value="permission">Permissions (/permissions)</option>
+              <option value="budget-set">Budget (/budgetScreen)</option>
+              <option value="ws-sop-list">SOP (/sopScreen)</option>
+              <option value="slab_check">Slab Checklist (/checklistScreen)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="fcm-body">Body Text</label>
+          <input type="text" id="fcm-body" value="This is a test notification generated from Stallion Hub.">
+        </div>
+
+        <div class="inline-group">
+          <div class="form-group">
+            <label for="fcm-ref-id">Reference ID</label>
+            <input type="text" id="fcm-ref-id" value="123">
+          </div>
+          <div class="form-group">
+            <label for="fcm-proj-name">Project Name</label>
+            <input type="text" id="fcm-proj-name" value="Sharda Project">
+          </div>
+        </div>
+
+        <button id="send-fcm-btn">Send Test Push to Device</button>
+      </div>
+
+      <!-- Testing Instructions Tab -->
+      <div id="tab-instructions" class="tab-content">
+        <div class="guide-container">
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-num">1</span>
+              Retrieve FCM Registration Token
+            </div>
+            <div class="step-desc">
+              Run your Flutter app in debug mode on your phone or simulator. Once loaded, search the terminal console logs for the string:
+              <br><br>
+              <span class="code-snippet">🔥 NEW FCM DEVICE TOKEN: &lt;token&gt;</span>
+              <br><br>
+              Copy this token and paste it into the <strong>Device Registration Token</strong> field in the sidebar of this page.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-num">2</span>
+              Extract Auth Token (JWT)
+            </div>
+            <div class="step-desc">
+              Log in to the web panel on Chrome or Safari.
+              <ul>
+                <li>Right-click and choose <strong>Inspect</strong>.</li>
+                <li>Go to the <strong>Application</strong> (or Storage) tab.</li>
+                <li>Under <strong>Local Storage</strong>, look for key: <span class="code-snippet">token</span>.</li>
+                <li>Copy the value and paste it into the <strong>Bearer Auth Token</strong> field in the sidebar.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-num">3</span>
+              Check WebSocket (Socket.io) Real-time Data
+            </div>
+            <div class="step-desc">
+              Fill in your Socket URL (e.g. <span class="code-snippet">https://api.dev.batman.co.in</span>) and token. Click <strong>Connect Socket.io</strong>.
+              <br>
+              When a status or tower is modified, verify that you see the raw Socket.IO JSON log print in the <strong>Unified Logs</strong> tab immediately.
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-num">4</span>
+              Verify Website Trigger Banners (Duplicate Test)
+            </div>
+            <div class="step-desc">
+              While the mobile app is in the **foreground** and connected:
+              <ul>
+                <li>Modify a tower status or document from the website admin panel.</li>
+                <li><strong>Expected Behavior on Phone:</strong> You should receive exactly **one** push notification banner. The duplicate Socket.IO banner is successfully ignored on Android/iOS/macOS.</li>
+                <li><strong>Expected Behavior on Dashboard:</strong> The debugger dashboard should show the raw JSON WebSocket packet received, verifying that the server did broadcast the Socket event.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step-card">
+            <div class="step-title">
+              <span class="step-num">5</span>
+              Verify Navigation Routes (FCM Test)
+            </div>
+            <div class="step-desc">
+              To verify that the phone routes clicks to the correct module views (e.g. Legal or Permissions):
+              <ol>
+                <li>Go to the <strong>Trigger Test Push (FCM)</strong> tab.</li>
+                <li>Fill in your Firebase Server Key and select your target Module type (e.g., <span class="code-snippet">Legal</span> or <span class="code-snippet">Permission</span>).</li>
+                <li>Click <strong>Send Test Push to Device</strong>.</li>
+                <li>When the banner appears on the device, tap it. The app should open and immediately push to the correct screen (e.g., routing to the Legal/Permission module view and highlighting the reference ID).</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Time updater
+  setInterval(() => {
+    const now = new Date();
+    document.getElementById('current-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }, 1000);
+
+  // Tab switcher
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    event.currentTarget.classList.add('active');
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+  }
+
+  // Logger functions
+  const logsContainer = document.getElementById('logs-container');
+
+  function addLog(type, title, content, isJson = false) {
+    const logItem = document.createElement('div');
+    logItem.className = `log-item log-${type.toLowerCase()}`;
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString() + '.' + String(now.getMilliseconds()).padStart(3, '0');
+    
+    let html = `
+      <div class="log-time">${timeStr}</div>
+      <div class="log-meta">
+        <span class="log-type">${type.toUpperCase()}</span>
+        <span>${escapeHtml(title)}</span>
+      </div>
+    `;
+
+    if (isJson) {
+      html += `<pre><code>${escapeHtml(JSON.stringify(content, null, 2))}</code></pre>`;
+    } else {
+      html += `<div>${escapeHtml(content)}</div>`;
+    }
+
+    logItem.innerHTML = html;
+    logsContainer.appendChild(logItem);
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+  }
+
+  function clearLogs() {
+    logsContainer.innerHTML = '';
+    addLog('info', 'Console cleared', 'Logs console is active.');
+  }
+
+  function escapeHtml(text) {
+    if (typeof text !== 'string') text = String(text);
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Socket.io Connection Logic
+  let socket = null;
+  const connectBtn = document.getElementById('connect-socket-btn');
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+
+  connectBtn.addEventListener('click', () => {
+    if (socket && socket.connected) {
+      socket.disconnect();
+      return;
+    }
+
+    const socketUrl = document.getElementById('socket-url').value.trim();
+    const token = document.getElementById('auth-token').value.trim();
+
+    if (!socketUrl) {
+      alert("Please enter a Socket.io URL");
+      return;
+    }
+
+    addLog('info', 'Connecting Socket', `Attempting to connect to ${socketUrl}...`);
+    statusDot.className = 'dot dot-warning';
+    statusText.innerText = 'Connecting...';
+    connectBtn.innerText = 'Connecting...';
+
+    // Socket.io config
+    const socketOptions = {
+      transports: ['websocket'],
+      forceNew: true,
+      reconnectionAttempts: 3
+    };
+
+    if (token) {
+      socketOptions.auth = { token: token };
+      socketOptions.extraHeaders = {
+        Authorization: `Bearer ${token}`
+      };
+    }
+
+    try {
+      socket = io(socketUrl, socketOptions);
+
+      socket.on('connect', () => {
+        statusDot.className = 'dot dot-online';
+        statusText.innerText = 'Connected';
+        connectBtn.innerText = 'Disconnect Socket';
+        addLog('info', 'Socket Connected', `Socket successfully authenticated & connected (ID: ${socket.id})`);
+      });
+
+      socket.on('disconnect', (reason) => {
+        statusDot.className = 'dot dot-offline';
+        statusText.innerText = 'Disconnected';
+        connectBtn.innerText = 'Connect Socket.io';
+        addLog('info', 'Socket Disconnected', `Socket disconnected. Reason: ${reason}`);
+      });
+
+      socket.on('connect_error', (error) => {
+        statusDot.className = 'dot dot-offline';
+        statusText.innerText = 'Error';
+        connectBtn.innerText = 'Connect Socket.io';
+        addLog('error', 'Socket Connection Error', error.message || error);
+      });
+
+      // Listen for all events (wildcard logging)
+      socket.onAny((event, data) => {
+        addLog('socket', `Event: ${event}`, data, true);
+      });
+
+    } catch (e) {
+      addLog('error', 'Socket Exception', e.message);
+      statusDot.className = 'dot dot-offline';
+      statusText.innerText = 'Exception';
+      connectBtn.innerText = 'Connect Socket.io';
+    }
+  });
+
+  // API Call logic
+  const fetchApiBtn = document.getElementById('fetch-api-btn');
+  const readAllBtn = document.getElementById('read-all-btn');
+  const apiOutput = document.getElementById('api-output');
+
+  fetchApiBtn.addEventListener('click', async () => {
+    let apiUrl = document.getElementById('api-url').value.trim();
+    const token = document.getElementById('auth-token').value.trim();
+
+    if (!apiUrl) {
+      alert("Please enter API Base URL");
+      return;
+    }
+
+    if (!apiUrl.endsWith('/')) apiUrl += '/';
+    const notificationsUrl = `${apiUrl}notifications`;
+
+    addLog('api', 'HTTP GET Request', `Fetching notifications from: ${notificationsUrl}`);
+    apiOutput.innerHTML = '<div class="log-item">Fetching data...</div>';
+
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(notificationsUrl, {
+        method: 'GET',
+        headers: headers
+      });
+
+      const data = await response.json();
+      addLog('api', `HTTP Response: ${response.status}`, data, true);
+      
+      // Update UI tab log
+      apiOutput.innerHTML = '';
+      const responseLog = document.createElement('div');
+      responseLog.className = 'log-item';
+      responseLog.innerHTML = `
+        <div class="log-time">HTTP Status ${response.status}</div>
+        <pre><code>${escapeHtml(JSON.stringify(data, null, 2))}</code></pre>
+      `;
+      apiOutput.appendChild(responseLog);
+
+    } catch (e) {
+      addLog('error', 'API Request Failed', e.message);
+      apiOutput.innerHTML = `<div class="log-item log-error" style="color: var(--error)">Error: ${escapeHtml(e.message)}</div>`;
+    }
+  });
+
+  readAllBtn.addEventListener('click', async () => {
+    let apiUrl = document.getElementById('api-url').value.trim();
+    const token = document.getElementById('auth-token').value.trim();
+
+    if (!apiUrl) return alert("Please enter API Base URL");
+    if (!apiUrl.endsWith('/')) apiUrl += '/';
+    const url = `${apiUrl}notifications/read-all`;
+
+    addLog('api', 'HTTP PUT Request', `Marking all notifications as read: ${url}`);
+    
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: headers
+      });
+      const data = await response.json();
+      addLog('api', `Mark all read response: ${response.status}`, data, true);
+      alert("Notifications marked as read successfully!");
+    } catch (e) {
+      addLog('error', 'API Request Failed', e.message);
+    }
+  });
+
+  // FCM Trigger Logic
+  const sendFcmBtn = document.getElementById('send-fcm-btn');
+
+  sendFcmBtn.addEventListener('click', async () => {
+    const deviceToken = document.getElementById('device-token').value.trim();
+    const serverKey = document.getElementById('fcm-server-key').value.trim();
+    
+    if (!deviceToken) {
+      alert("Please enter the Device Registration Token (FCM) in the sidebar");
+      return;
+    }
+    if (!serverKey) {
+      alert("Please enter the FCM Legacy Server Key");
+      return;
+    }
+
+    const title = document.getElementById('fcm-title').value.trim();
+    const body = document.getElementById('fcm-body').value.trim();
+    const type = document.getElementById('fcm-type').value;
+    const refId = document.getElementById('fcm-ref-id').value.trim();
+    const projName = document.getElementById('fcm-proj-name').value.trim();
+
+    addLog('fcm', 'Triggering FCM Dispatch', `Sending notification directly to device...`);
+
+    const payload = {
+      to: deviceToken,
+      notification: {
+        title: title,
+        body: body,
+        sound: "default",
+        badge: 1
+      },
+      data: {
+        type: type,
+        reference_id: refId,
+        project_name: projName,
+        click_action: "FLUTTER_NOTIFICATION_CLICK"
+      },
+      priority: "high"
+    };
+
+    try {
+      const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `key=${serverKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      addLog('fcm', `FCM Response Status: ${response.status}`, data, true);
+      
+      if (response.status === 200 && data.success === 1) {
+        alert("Push notification successfully sent to device!");
+      } else {
+        alert(`Failed to send push: ${data.results ? data.results[0].error : 'Unknown error'}`);
+      }
+
+    } catch (e) {
+      addLog('error', 'FCM Send Failed', e.message);
+    }
+  });
+</script>
+
+</body>
+</html>

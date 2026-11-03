@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "633143665329",
+    "project_id": "stallion-ce48d",
+    "storage_bucket": "stallion-ce48d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:633143665329:android:cc8d16240ae7914390f890",
+        "android_client_info": {
+          "package_name": "com.stallionapp.stallion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBol9aakuO6dax_it86dlFw0XsVKlNjU1U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
