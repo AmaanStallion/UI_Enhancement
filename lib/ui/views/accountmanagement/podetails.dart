@@ -1,3 +1,7 @@
+import 'po_action_feedback.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_loading.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_document.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_network.dart';
@@ -18,7 +22,6 @@ import 'package:search_choices/search_choices.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stallion/models/add_custom_po_unit.dart';
 import 'package:stallion/models/po_approved_user.dart';
-import 'package:stallion/ui/custom_loading/custom_loading.dart';
 import 'package:stallion/ui/views/rccstructure/pdfviewer.dart';
 import '../../../models/get_po_details_by_status.dart';
 import '../../../models/get_po_requistion_vendor_list.dart';
@@ -28,7 +31,6 @@ import '../../../models/message_success.dart';
 import '../../../utils/api_network_call.dart';
 import '../../../utils/app_url.dart';
 import '../../shared/ui_helpers.dart';
-import '../../widgets/simple_button.dart';
 import '../PurchaseOrder/purchase_order_form.dart';
 import 'paymentdue/popreviewhtmldetails.dart';
 import 'package:http/http.dart' as http;
@@ -118,7 +120,7 @@ class _PoDetailsState extends State<PoDetails> {
   String selectedAssignToId = '';
 
   Future<AssingToList?> setPoAssignTo() async {
-    CustomLoading.progressDialog(isLoading: true, context: context);
+    AccountLoading.progressDialog(isLoading: true, context: context);
     final SharedPreferences prefs = await _prefs;
     String? userId = (prefs.getString('mobileNo') ??
         (useAccountManagementTestData ? '1' : null));
@@ -133,11 +135,11 @@ class _PoDetailsState extends State<PoDetails> {
 
     var response = await apiNetworkHandler.post(AppUrl.webSetPoAssignTo, data);
     if (response.statusCode == 200 || response.statusCode == 201) {
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
       Navigator.of(context).pop();
       Navigator.of(context).pop();
     } else {
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
     }
     // return null;
   }
@@ -145,7 +147,7 @@ class _PoDetailsState extends State<PoDetails> {
   Future<AssingToList?> setPoVerifyFlag({
     required String isCheck,
   }) async {
-    CustomLoading.progressDialog(isLoading: true, context: context);
+    AccountLoading.progressDialog(isLoading: true, context: context);
     final SharedPreferences prefs = await _prefs;
     String? userId = (prefs.getString('mobileNo') ??
         (useAccountManagementTestData ? '1' : null));
@@ -163,16 +165,17 @@ class _PoDetailsState extends State<PoDetails> {
       setState(() {
         isChecked = !isChecked;
       });
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
 
       Navigator.of(context).pop();
-      showDialog<String>(
+      _showPoDialog<String>(
           barrierDismissible: false,
           context: context,
           builder: (BuildContext context) => AlertDialog(
+                clipBehavior: Clip.antiAlias,
+                surfaceTintColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8), // Set radius to zero
-                ),
+                    borderRadius: BorderRadius.circular(16)),
                 titlePadding: const EdgeInsets.symmetric(vertical: 0),
                 actionsPadding: const EdgeInsets.symmetric(horizontal: 0),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -195,7 +198,7 @@ class _PoDetailsState extends State<PoDetails> {
                     'Successfully ${isCheck == '1' ? "checked" : "unchecked"} this PO.',
                     // "Are you sure, You want to ${isChecked ? 'uncheck' : 'check'} this PO?",
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: context.accountFont(18, mobile: 14),
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
@@ -221,36 +224,35 @@ class _PoDetailsState extends State<PoDetails> {
                   //     });
                   //   },
                   // ),
-                  InkWell(
+                  PoActionFeedback(
+                      child: InkWell(
                     onTap: () {
                       Navigator.pop(context);
                     },
                     child: Container(
-                      width: 300,
+                      width: 120,
+                      margin: const EdgeInsets.all(12),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: const BoxDecoration(
                         color: Colors.black,
-                        borderRadius: BorderRadius.only(
-                          bottomRight: Radius.circular(8),
-                          bottomLeft: Radius.circular(8),
-                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(999)),
                       ),
-                      child: const Text(
+                      child: Text(
                         'OK',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: context.accountFont(18, mobile: 14),
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                  ),
+                  )),
                 ],
               ));
       // Navigator.of(context).pop();
     } else {
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
     }
     // return null;
   }
@@ -338,103 +340,98 @@ class _PoDetailsState extends State<PoDetails> {
     return null;
   }
 
-  updateConfirmationModal() {
-    return showDialog(
+  _showCheckConfirmation() {
+    return _showPoDialog(
         context: context,
-        // barrierDismissible: false,
-        builder: (context) {
-          return StatefulBuilder(builder: (context1, setState2) {
-            return AlertDialog(
+        builder: (context) => AlertDialog(
+              clipBehavior: Clip.antiAlias,
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8), // Set radius to zero
-              ),
-              titlePadding: const EdgeInsets.symmetric(vertical: 0),
-              actionsPadding: const EdgeInsets.symmetric(horizontal: 0),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              actionsAlignment: MainAxisAlignment.center,
-              title: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  "Are you sure you want to assign this PO?",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              actions: <Widget>[
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        width: 170,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.only(
-                            // bottomRight: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'NO',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    InkWell(
-                      onTap: () {
-                        setPoAssignTo();
-                      },
-                      child: Container(
-                        width: 170,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.only(
-                            bottomRight: Radius.circular(8),
-                            // bottomLeft: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'YES',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
+                  borderRadius: BorderRadius.circular(16)),
+              titlePadding: EdgeInsets.zero,
+              title: _poPopupHeader(isChecked
+                  ? 'Uncheck Purchase Order'
+                  : 'Check Purchase Order'),
+              contentPadding: const EdgeInsets.all(20),
+              content: SizedBox(
+                  width: 360,
+                  child: Text(
+                      "Are you sure you want to ${isChecked ? 'uncheck' : 'check'} this PO?",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: context.accountFont(16, mobile: 14)))),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                Row(children: [
+                  Expanded(
+                      child: PoActionFeedback(
+                          child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  foregroundColor: Colors.black,
+                                  side: const BorderSide(color: Colors.black)),
+                              child: const Text('NO')))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: PoActionFeedback(
+                          child: ElevatedButton(
+                              onPressed: () => setPoVerifyFlag(
+                                  isCheck: isChecked ? '0' : '1'),
+                              style: ElevatedButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  backgroundColor: Colors.black,
+                                  foregroundColor: Colors.white),
+                              child: const Text('YES')))),
+                ])
               ],
-              // content: SizedBox(
-              //   height: 300,
-              //   width: 400,
-              // ),
-            );
-          });
-        });
+            ));
+  }
+
+  updateConfirmationModal() {
+    return _showPoDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              clipBehavior: Clip.antiAlias,
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              titlePadding: EdgeInsets.zero,
+              title: _poPopupHeader('Assign Purchase Order'),
+              contentPadding: const EdgeInsets.all(20),
+              content: SizedBox(
+                  width: 360,
+                  child: Text('Are you sure you want to assign this PO?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: context.accountFont(16, mobile: 14)))),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                Row(children: [
+                  Expanded(
+                      child: PoActionFeedback(
+                          child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  foregroundColor: Colors.black,
+                                  side: const BorderSide(color: Colors.black)),
+                              child: const Text('NO')))),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: PoActionFeedback(
+                          child: ElevatedButton(
+                              onPressed: () => setPoAssignTo(),
+                              style: ElevatedButton.styleFrom(
+                                  shape: const StadiumBorder(),
+                                  backgroundColor: Colors.black,
+                                  foregroundColor: Colors.white),
+                              child: const Text('YES')))),
+                ])
+              ],
+            ));
   }
 
   Future<ResponsePurchaseDefaultOrderRequest?>
@@ -474,9 +471,26 @@ class _PoDetailsState extends State<PoDetails> {
         purchaseUserTrack = dataModel.response?.purchaseUserTrack;
         finishingTypeList = dataModel.response?.finishingTypeList;
         finishingTypeListOriginal = dataModel.response?.finishingTypeList;
+        if (useAccountManagementTestData) {
+          finishingTypeList = [
+            ...?finishingTypeList,
+            for (final name in ['Cement', 'Ready Mix Concrete', 'Bricks', 'Sand', 'Aggregate', 'Plumbing Materials'])
+              FinishingTypeList(finishingId: 'preview-type-$name',
+                  finishingName: name, count: '0', finishingUnit: []),
+          ];
+          finishingTypeListOriginal = finishingTypeList;
+        }
 
         slabDetails = dataModel.response?.slabDetails;
         slabDetailsOriginal = dataModel.response?.slabDetails;
+        if (useAccountManagementTestData) {
+          slabDetails = [
+            ...?slabDetails,
+            for (final name in ['Basement', 'Ground Floor', 'First Floor', 'Second Floor', 'Terrace'])
+              SlabDetail(slab_name: name, slab_id: 'preview-slab-$name', selected: '0'),
+          ];
+          slabDetailsOriginal = slabDetails;
+        }
 
         if (finishingTypeList!.isNotEmpty) {
           requirementTypeitems = [];
@@ -804,24 +818,31 @@ class _PoDetailsState extends State<PoDetails> {
 
       Future.delayed(Duration.zero).then((_) {
         Navigator.pop(dialogContext);
-        showDialog<String>(
+        _showPoDialog<String>(
             context: context,
             builder: (BuildContext context) => AlertDialog(
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  surfaceTintColor: Colors.transparent,
                   title: const Text('Purchase Order'),
-                  content: const Text('Request status updated successfully.',
+                  content: Text('Request status updated successfully.',
                       style: TextStyle(
-                          fontStyle: FontStyle.normal, fontSize: 17.0)),
+                          fontStyle: FontStyle.normal,
+                          fontSize: context.accountFont(17.0, mobile: 14))),
                   actions: <Widget>[
-                    ElevatedButton(
+                    PoActionFeedback(
+                        child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                          shape: const StadiumBorder(),
                           backgroundColor: Colors.black,
                           fixedSize: const Size.fromWidth(100),
                           padding: const EdgeInsets.all(10),
                           textStyle: const TextStyle(color: Colors.white)),
-                      child: const Text('CLOSE',
+                      child: Text('CLOSE',
                           style: TextStyle(
                               fontWeight: FontWeight.normal,
-                              fontSize: 16.0,
+                              fontSize: context.accountFont(16.0, mobile: 14),
                               color: Colors.white)),
                       onPressed: () {
                         setState(() {
@@ -829,7 +850,7 @@ class _PoDetailsState extends State<PoDetails> {
                           Navigator.pop(context);
                         });
                       },
-                    ),
+                    )),
                   ],
                 ));
       });
@@ -837,24 +858,31 @@ class _PoDetailsState extends State<PoDetails> {
       // Navigator.pop(dialogContext);
       Future.delayed(Duration.zero).then((_) {
         Navigator.pop(dialogContext);
-        showDialog<String>(
+        _showPoDialog<String>(
             context: context,
             builder: (BuildContext context) => AlertDialog(
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  surfaceTintColor: Colors.transparent,
                   title: const Text('Purchase Order'),
-                  content: const Text('Invalid Input.',
+                  content: Text('Invalid Input.',
                       style: TextStyle(
-                          fontStyle: FontStyle.normal, fontSize: 17.0)),
+                          fontStyle: FontStyle.normal,
+                          fontSize: context.accountFont(17.0, mobile: 14))),
                   actions: <Widget>[
-                    ElevatedButton(
+                    PoActionFeedback(
+                        child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                          shape: const StadiumBorder(),
                           backgroundColor: Colors.black,
                           fixedSize: const Size.fromWidth(100),
                           padding: const EdgeInsets.all(10),
                           textStyle: const TextStyle(color: Colors.white)),
-                      child: const Text('CLOSE',
+                      child: Text('CLOSE',
                           style: TextStyle(
                               fontWeight: FontWeight.normal,
-                              fontSize: 16.0,
+                              fontSize: context.accountFont(16.0, mobile: 14),
                               color: Colors.white)),
                       onPressed: () {
                         setState(() {
@@ -862,12 +890,12 @@ class _PoDetailsState extends State<PoDetails> {
                           // Navigator.pop(context);
                         });
                       },
-                    ),
+                    )),
                   ],
                 ));
       });
     }
-    // CustomLoading.progressDialog(isLoading: false, context: context11);
+    // AccountLoading.progressDialog(isLoading: false, context: context11);
   }
   // Future<ResponseMessageSuccess?> submitOkToOrderPurchaseOrder() async {
   //   final SharedPreferences prefs = await _prefs;
@@ -909,7 +937,7 @@ class _PoDetailsState extends State<PoDetails> {
   //     if (dataModel.response?.errorCode == "0") {
   //       Future.delayed(Duration.zero).then((_) {
   //         Navigator.pop(dialogContext);
-  //         showDialog<String>(
+  //         _showPoDialog<String>(
   //             context: context,
   //             builder: (BuildContext context) => AlertDialog(
   //                   title: const Text('Purchase Order'),
@@ -987,24 +1015,31 @@ class _PoDetailsState extends State<PoDetails> {
         Future.delayed(Duration.zero).then((_) {
           Navigator.maybePop(context);
           Navigator.pop(dialogContext);
-          showDialog<String>(
+          _showPoDialog<String>(
               context: context,
               builder: (BuildContext context) => AlertDialog(
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    surfaceTintColor: Colors.transparent,
                     title: const Text('Purchase Order'),
-                    content: const Text('Request status updated successfully.',
+                    content: Text('Request status updated successfully.',
                         style: TextStyle(
-                            fontStyle: FontStyle.normal, fontSize: 17.0)),
+                            fontStyle: FontStyle.normal,
+                            fontSize: context.accountFont(17.0, mobile: 14))),
                     actions: <Widget>[
-                      ElevatedButton(
+                      PoActionFeedback(
+                          child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
                             backgroundColor: Colors.black,
                             fixedSize: const Size.fromWidth(100),
                             padding: const EdgeInsets.all(10),
                             textStyle: const TextStyle(color: Colors.white)),
-                        child: const Text('CLOSE',
+                        child: Text('CLOSE',
                             style: TextStyle(
                                 fontWeight: FontWeight.normal,
-                                fontSize: 16.0,
+                                fontSize: context.accountFont(16.0, mobile: 14),
                                 color: Colors.white)),
                         onPressed: () {
                           setState(() {
@@ -1012,7 +1047,7 @@ class _PoDetailsState extends State<PoDetails> {
                             Navigator.pop(context);
                           });
                         },
-                      ),
+                      )),
                     ],
                   ));
         });
@@ -1060,25 +1095,32 @@ class _PoDetailsState extends State<PoDetails> {
       if (dataModel.response?.errorCode == "0") {
         Future.delayed(Duration.zero).then((_) {
           Navigator.pop(dialogContext);
-          showDialog<String>(
+          _showPoDialog<String>(
               context: context,
               builder: (BuildContext context) => AlertDialog(
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    surfaceTintColor: Colors.transparent,
                     title: const Text('PO Vendor Quote'),
-                    content: const Text(
+                    content: Text(
                         'Request for Quote is being send successfully.',
                         style: TextStyle(
-                            fontStyle: FontStyle.normal, fontSize: 17.0)),
+                            fontStyle: FontStyle.normal,
+                            fontSize: context.accountFont(17.0, mobile: 14))),
                     actions: <Widget>[
-                      ElevatedButton(
+                      PoActionFeedback(
+                          child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
                             backgroundColor: Colors.black,
                             fixedSize: const Size.fromWidth(100),
                             padding: const EdgeInsets.all(10),
                             textStyle: const TextStyle(color: Colors.white)),
-                        child: const Text('CLOSE',
+                        child: Text('CLOSE',
                             style: TextStyle(
                                 fontWeight: FontWeight.normal,
-                                fontSize: 16.0,
+                                fontSize: context.accountFont(16.0, mobile: 14),
                                 color: Colors.white)),
                         onPressed: () {
                           setState(() {
@@ -1086,7 +1128,7 @@ class _PoDetailsState extends State<PoDetails> {
                             Navigator.maybePop(context);
                           });
                         },
-                      ),
+                      )),
                     ],
                   ));
         });
@@ -1103,42 +1145,27 @@ class _PoDetailsState extends State<PoDetails> {
   bool flagBtnHideApproveReject = false;
 
   chooseAssignToModal() {
-    return showDialog(
+    return _showPoDialog(
         context: context,
         // barrierDismissible: false,
         builder: (context) {
           return StatefulBuilder(builder: (context1, setState3) {
             return AlertDialog(
+              clipBehavior: Clip.antiAlias,
+              surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8), // Set radius to zero
-              ),
+                  borderRadius: BorderRadius.circular(16)),
               titlePadding: const EdgeInsets.symmetric(vertical: 0),
               actionsPadding: const EdgeInsets.symmetric(horizontal: 0),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               actionsAlignment: MainAxisAlignment.center,
-              title: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  "Select Assign To",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              title: _poPopupHeader('Select Assign To'),
               actions: <Widget>[
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    InkWell(
+                    PoActionFeedback(
+                        child: InkWell(
                       onTap: () {
                         print('----------------------');
                         Navigator.pop(context);
@@ -1156,27 +1183,8 @@ class _PoDetailsState extends State<PoDetails> {
 
                         // chooseTenantController.text = temp;
                       },
-                      child: Container(
-                        width: 460,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: const BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.only(
-                            // bottomRight: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          'SUBMIT',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
+                      child: _poPopupAction('SUBMIT'),
+                    )),
                     // const SizedBox(width: 10),
                     // InkWell(
                     //   onTap: () {
@@ -1230,57 +1238,15 @@ class _PoDetailsState extends State<PoDetails> {
                         //   return null;
                         // },
                         // controller: _workTypeController,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Colors.black,
-                            fontSize: 14.0,
+                            fontSize: context.accountFont(14.0, mobile: 14),
                             fontWeight: FontWeight.w400),
-                        decoration: InputDecoration(
-                          disabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.black38),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: (Colors.black38),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: (Colors.black38),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: (Colors.red),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(
-                              color: (Colors.black38),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.all(12.0),
-                          border: const OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black54),
-                          ),
-                          hintText: 'Search',
-                          hintStyle: const TextStyle(
-                            color: Color.fromARGB(255, 116, 116, 116),
-                            fontSize: 13.0,
-                            fontWeight: FontWeight.w200,
-                            fontFamily: 'HelveticaNeue',
-                          ),
-                          // suffixIcon: Icon(
-                          //   Icons.keyboard_arrow_down_rounded,
-                          // ),
-                        ),
+                        decoration: _poPopupSearchDecoration('Search'),
                       ),
                       for (int i = 0; i < filteredAssignTo()!.length; i++)
-                        InkWell(
+                        PoActionFeedback(
+                            child: InkWell(
                           onTap: () {
                             setState3(() {
                               selectedAssignToId =
@@ -1293,39 +1259,18 @@ class _PoDetailsState extends State<PoDetails> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: const BoxDecoration(
-                                border: Border(
-                                    bottom: BorderSide(
-                              color: Colors.grey,
-                            ))),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  filteredAssignTo()?[i].transEmpName ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 19,
-                                  ),
-                                ),
-                                Icon(
-                                  // filteredAssignTo()?[i].isSelected == true
-                                  selectedAssignToId ==
-                                          filteredAssignTo()?[i].transEmpId
-                                      ? Icons.check_circle_outline_outlined
-                                      : Icons.circle_outlined,
-                                  color:
-                                      // filteredAssignTo()?[i].isSelected == true
-                                      selectedAssignToId ==
-                                              filteredAssignTo()?[i].transEmpId
-                                          ? Colors.green
-                                          : Colors.grey,
-                                )
-                              ],
-                            ),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: _poPopupRowDecoration(
+                                selectedAssignToId ==
+                                    filteredAssignTo()?[i].transEmpId),
+                            child: _poPopupSelectionRow(
+                                filteredAssignTo()?[i].transEmpName ?? '',
+                                selected: selectedAssignToId ==
+                                    filteredAssignTo()?[i].transEmpId),
                           ),
-                        ),
-                      // Row(
+                        )),
+                      // AccountFlowRow(
                       //   children: [
                       //     Text(tenentList?[i].name ?? ''),
                       //   ],
@@ -1364,1189 +1309,1022 @@ class _PoDetailsState extends State<PoDetails> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-          centerTitle: true,
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: Text('${widget.projectName!.toUpperCase()} - PO ASSIGNED',
-              style:
-                  const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
-          leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                Navigator.maybePop(context);
-              })),
-      body: flagcalled == true
-          ? SingleChildScrollView(
-              child: Column(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 50),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 90),
-                      const Spacer(),
-                      const Padding(
-                        padding: EdgeInsets.only(top: 10, bottom: 10),
-                        child: Text('PO DETAILS'),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () {
-                          var projectId = widget.projectId!;
-                          var projectName = widget.projectName!;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) {
-                                return PoPreviewHtml(
-                                  projectId: projectId,
-                                  towarId: widget.towarId!,
-                                  projectName: projectName,
-                                  orderId: widget.orderDetails?.orderId ?? '',
-                                  poNo: widget.orderDetails?.poNo ?? '',
-                                );
-                              },
-                            ),
-                          ).then((_) => {});
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 5),
-                          decoration: BoxDecoration(
-                            // border: Border.all(color: Colors.black26),
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.black12,
-                          ),
-                          child: const Text(
-                            "VIEW PO",
-                            style: TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-                const Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: Colors.black,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      children: [
-                        verticalSpaceSmall,
-                        const Text(
-                          'P.O. No.',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.poNo!,
-                          style: boldText,
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        const Text(
-                          'P.O. Status',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.poStatus! == '0'
-                              ? 'Pendng'
-                              : widget.orderDetails!.poStatus! == '1'
-                                  ? 'Assigned'
-                                  : widget.orderDetails!.poStatus! == '2'
-                                      ? 'Issued'
-                                      : widget.orderDetails!.poStatus! == '3'
-                                          ? 'Dispute'
-                                          : '---',
-                          style: boldText,
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        const Text(
-                          'Slab No',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.slabName!,
-                          style: boldText,
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        const Text(
-                          'Booking Type',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.gradeName!,
-                          style: boldText,
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        const Text(
-                          'Project Name',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.projectName!,
-                          style: boldText,
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        const Text(
-                          'Requested By',
-                          style: normalText,
-                        ),
-                        const SizedBox(
-                          height: 10,
-                        ),
-                        Text(
-                          widget.orderDetails!.raisedBy!,
-                          style: boldText,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                verticalSpaceSmall,
-                const Divider(
-                  height: 1,
-                  thickness: 0.5,
-                  color: Colors.black,
-                ),
-                ListView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    //controller: _controller,
-                    shrinkWrap: true,
-                    reverse: false,
-                    itemCount: arrayList.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(10),
-                            color: Colors.white,
-                            shape: BoxShape.rectangle,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                left: 40.0, right: 40.0, bottom: 20.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                index != 0
-                                    ? Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          IconButton(
-                                            iconSize: 30,
-                                            icon: const Icon(
-                                              Icons.close_rounded,
-                                            ),
-                                            color: Colors.black,
-                                            onPressed: () {
-                                              setState(() {
-                                                arrayList.removeAt(index);
-                                              });
-                                            },
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox(height: 20),
-                                _requirementType(index),
-                                verticalSpaceSmall15,
-                                _description(index),
-                                verticalSpaceSmall15,
-                                _selecteBrand(index),
-                                verticalSpaceSmall15,
-                                _requirementFor(index),
-                                verticalSpaceSmall15,
-                                _selectedReqDate(index),
-                                verticalSpaceSmall15,
-                                _quantityUnit(index),
-                                verticalSpaceSmall15,
-                                _unitPrice(index),
-                                verticalSpaceSmall15,
-                                _totalPrice(index),
-                                verticalSpaceSmall15,
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 50),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Upload", style: TextStyle(fontSize: 14)), //
-                      Row(
-                        children: [
-                          InkWell(
-                            onTap: () async {
-                              // if (arrayFiles.length != 4) {
-                              FilePickerResult? result =
-                                  await FilePicker.platform.pickFiles(
-                                type: FileType.custom,
-                                allowedExtensions: [
-                                  'jpg',
-                                  'jpeg',
-                                  'png',
-                                  // "mp4",
-                                  "pdf",
-                                ],
-                              );
-                              if (result != null) {
-                                PlatformFile file = result.files.first;
-                                Uint8List? fileBytes = result.files.first.bytes;
-                                String fileName = result.files.first.name;
-                                setState(() {
-                                  arrayFilesBytes.add(fileBytes);
-                                  arrayFiles.add(file);
-                                });
-
-                                //inspect(arrayFiles[0]);
-                              } else {
-                                // User canceled the picker
-                              }
-                              // }
-                            },
-                            child: Image.asset(
-                              'images/projectmanagement/img5.png',
-                              height: 100,
-                              width: 100,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          for (int j = 0;
-                              j < widget.orderDetails!.poDocument!.length;
-                              j++)
-                            Row(
-                              children: [
-                                if (widget.orderDetails!.poDocument?[j]
-                                            .split('.')
-                                            .last
-                                            .toLowerCase() ==
-                                        'jpg' ||
-                                    widget.orderDetails!.poDocument?[j]
-                                            .split('.')
-                                            .last
-                                            .toLowerCase() ==
-                                        'jpeg' ||
-                                    widget.orderDetails!.poDocument?[j]
-                                            .split('.')
-                                            .last
-                                            .toLowerCase() ==
-                                        'png') //'jpg','jpeg','png',
-                                  Container(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        (useAccountManagementTestData
-                                            ? const Icon(
-                                                Icons.description_outlined,
-                                                size: 48,
-                                                color: Colors.black54)
-                                            : Image.network(
-                                                '${AppUrl.poDocPath}${widget.orderDetails!.poDocument?[j]}',
-                                                // ),
-                                                // File(widget
-                                                //     .orderDetails!.poDocument![j]),
-                                                height: 100,
-                                                width: 100,
-                                                fit: BoxFit.fill,
-                                              )),
-                                        // Positioned(
-                                        //   right: -10,
-                                        //   top: -10,
-                                        //   child: InkWell(
-                                        //     onTap: () {
-                                        //       // setState(() {
-                                        //       //   arrayFiles
-                                        //       //       .remove(arrayFiles[j]);
-                                        //       //   arrayFilesBytes
-                                        //       //       .remove(arrayFilesBytes[j]);
-                                        //       // });
-                                        //     },
-                                        //     child: const Icon(Icons.close),
-                                        //   ),
-                                        // )
-                                      ],
-                                    ),
-                                  ),
-                                if (widget.orderDetails!.poDocument?[j]
-                                        .split('.')
-                                        .last
-                                        .toLowerCase() ==
-                                    'pdf')
-                                  Container(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        InkWell(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) {
-                                                  return (useAccountManagementTestData
-                                                      ? const AccountManagementPreviewDocumentScreen()
-                                                      : PdfViewer(
-                                                          fileName: widget
-                                                              .orderDetails!
-                                                              .poDocument?[j],
-                                                          fileUrl:
-                                                              '${AppUrl.globalGrnPath}${widget.orderDetails!.poDocument?[j]}',
-
-                                                          // isLocalFileUpload: false,
-                                                          // localFiles:
-                                                          //     arrayFiles[j].path,
-                                                          // fileName: widget
-                                                          //     .orderDetails!
-                                                          //     .poDocument?[j],
-                                                          // fileUrl: arrayFiles[j].path,
-                                                        ));
-                                                },
-                                              ),
-                                            );
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: Colors.grey,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            // width: 100,
-                                            child: Image.asset(
-                                              'images/projectmanagement/pdf.png',
-                                              width: 100,
-                                              height: 100,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          right: -10,
-                                          top: -10,
-                                          child: InkWell(
-                                            onTap: () {
-                                              // setState(() {
-                                              //   arrayFiles
-                                              //       .remove(arrayFiles[j]);
-                                              //   arrayFilesBytes
-                                              //       .remove(arrayFilesBytes[j]);
-                                              // });
-                                            },
-                                            child: const Icon(Icons.close),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          const SizedBox(width: 10),
-                          for (int j = 0; j < arrayFiles.length; j++)
-                            Row(
-                              children: [
-                                if (arrayFiles[j].extension == 'jpg' ||
-                                    arrayFiles[j].extension == 'jpeg' ||
-                                    arrayFiles[j].extension ==
-                                        'png') //'jpg','jpeg','png',
-                                  Container(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        Image.file(
-                                          File(arrayFiles[j].path ?? ''),
-                                          height: 100,
-                                          width: 100,
-                                          fit: BoxFit.fill,
-                                        ),
-                                        Positioned(
-                                          right: -10,
-                                          top: -10,
-                                          child: InkWell(
-                                            onTap: () {
-                                              setState(() {
-                                                arrayFiles
-                                                    .remove(arrayFiles[j]);
-                                                arrayFilesBytes
-                                                    .remove(arrayFilesBytes[j]);
-                                              });
-                                            },
-                                            child: const Icon(Icons.close),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                if (arrayFiles[j].extension == 'pdf')
-                                  Container(
-                                    padding: const EdgeInsets.only(right: 10),
-                                    child: Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        InkWell(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) {
-                                                  return (useAccountManagementTestData
-                                                      ? const AccountManagementPreviewDocumentScreen()
-                                                      : PdfViewer(
-                                                          isLocalFileUpload:
-                                                              true,
-                                                          localFiles:
-                                                              arrayFiles[j]
-                                                                  .path,
-                                                          fileName:
-                                                              arrayFiles[j]
-                                                                  .name,
-                                                          fileUrl: arrayFiles[j]
-                                                              .path,
-                                                        ));
-                                                },
-                                              ),
-                                            );
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: Colors.grey,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            // width: 100,
-                                            child: Image.asset(
-                                              'images/projectmanagement/pdf.png',
-                                              width: 100,
-                                              height: 100,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          right: -10,
-                                          top: -10,
-                                          child: InkWell(
-                                            onTap: () {
-                                              setState(() {
-                                                arrayFiles
-                                                    .remove(arrayFiles[j]);
-                                                arrayFilesBytes
-                                                    .remove(arrayFilesBytes[j]);
-                                              });
-                                            },
-                                            child: const Icon(Icons.close),
-                                          ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                verticalSpaceSmall,
-                Padding(
-                  padding: const EdgeInsets.only(left: 100.0, right: 70.0),
-                  child: SizedBox(
-                      child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const SizedBox(
-                            width: 150,
-                            child: Text('Other Remarks', style: normalText),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                  left: 40, right: 10, top: 10),
-                              child: SizedBox(
-                                // height: 50,
-                                child: TextFormField(
-                                  enabled: flagBtnHideApproveReject == false
-                                      ? true
-                                      : false,
-                                  controller: _txtControllerRemark,
-                                  maxLines: 3,
-                                  onChanged: (String str) {
-                                    strRemark = str;
-                                  },
-                                  style: normalText,
-                                  decoration: InputDecoration(
-                                      hintText: 'Enter Other Remarks',
-                                      border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(5)),
-                                      focusedBorder: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(5),
-                                          borderSide: const BorderSide(
-                                              color: Colors.black))),
-                                ),
+    return AccountManagementSurface(
+        child: Theme(
+            data: accountManagementTheme(context).copyWith(
+              inputDecorationTheme: InputDecorationTheme(
+                filled: false,
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: widget.poId == 'Verified' ? 6 : 12),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+            child: Scaffold(
+              appBar: AppBar(
+                  centerTitle: true,
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  title: Text(
+                      '${widget.projectName!.toUpperCase()} - PO ASSIGNED',
+                      style: TextStyle(
+                          fontStyle: FontStyle.normal,
+                          fontSize: context.accountFont(17.0, mobile: 14))),
+                  leading: PoActionFeedback(
+                      child: IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () {
+                            Navigator.maybePop(context);
+                          }))),
+              body: flagcalled == true
+                  ? SingleChildScrollView(
+                      child: Column(children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: context.accountCompact ? 12 : 50),
+                          child: Row(
+                            children: [
+                              SizedBox(width: context.accountCompact ? 72 : 90),
+                              const Spacer(),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 10, bottom: 10),
+                                child: Text(
+                                    context.accountCompact
+                                        ? 'VERIFY PO'
+                                        : 'PO DETAILS',
+                                    style: TextStyle(
+                                        fontSize: context.accountFont(14,
+                                            mobile: 14))),
                               ),
+                              const Spacer(),
+                              PoActionFeedback(
+                                  child: InkWell(
+                                onTap: () {
+                                  var projectId = widget.projectId!;
+                                  var projectName = widget.projectName!;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) {
+                                        return PoPreviewHtml(
+                                          projectId: projectId,
+                                          towarId: widget.towarId!,
+                                          projectName: projectName,
+                                          orderId:
+                                              widget.orderDetails?.orderId ??
+                                                  '',
+                                          poNo: widget.orderDetails?.poNo ?? '',
+                                        );
+                                      },
+                                    ),
+                                  ).then((_) => {});
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    // border: Border.all(color: Colors.black26),
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(999)),
+                                    color: Colors.black12,
+                                  ),
+                                  child: Text(
+                                    "VIEW PO",
+                                    style: TextStyle(
+                                        fontSize:
+                                            context.accountFont(16, mobile: 14),
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ))
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          height: 1,
+                          thickness: 0.5,
+                          color: Colors.black,
+                        ),
+                        widget.poId == 'Verified'
+                            ? _verifyPoSummary()
+                            : _poSummaryRow(
+                          children: [
+                            Column(
+                              children: [
+                                context.accountCompact
+                                    ? const SizedBox(height: 4)
+                                    : verticalSpaceSmall,
+                                Text(
+                                  'P.O. No.',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.poNo!,
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 8 : 15,
+                                ),
+                                Text(
+                                  'P.O. Status',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.poStatus! == '0'
+                                      ? 'Pendng'
+                                      : widget.orderDetails!.poStatus! == '1'
+                                          ? 'Assigned'
+                                          : widget.orderDetails!.poStatus! ==
+                                                  '2'
+                                              ? 'Issued'
+                                              : widget.orderDetails!
+                                                          .poStatus! ==
+                                                      '3'
+                                                  ? 'Dispute'
+                                                  : '---',
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 8 : 15,
+                                ),
+                                Text(
+                                  'Slab No',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.slabName!,
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                              ],
                             ),
-                          )
+                            Column(
+                              children: [
+                                Text(
+                                  'Booking Type',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.gradeName!,
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 8 : 15,
+                                ),
+                                Text(
+                                  'Project Name',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.projectName!,
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 8 : 15,
+                                ),
+                                Text(
+                                  'Requested By',
+                                  style: context.accountCompact
+                                      ? normalText.copyWith(fontSize: 12, height: 1.15)
+                                      : normalText,
+                                ),
+                                SizedBox(
+                                  height: context.accountCompact ? 4 : 10,
+                                ),
+                                Text(
+                                  widget.orderDetails!.raisedBy!,
+                                  style: context.accountCompact
+                                      ? boldText.copyWith(fontSize: 13, height: 1.2)
+                                      : boldText,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        if (widget.poId != 'Verified') ...[
+                          context.accountCompact
+                              ? const SizedBox(height: 4)
+                              : verticalSpaceSmall,
+                          const Divider(height: 1, thickness: 0.5, color: Colors.black),
                         ],
-                      ),
-                      verticalSpaceSmall,
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          flagBtnHideApproveReject == false
-                              ? InkWell(
-                                  onTap: () {
-                                    bool isSame = false;
-                                    for (var i = 0; i < arrayList.length; i++) {
-                                      for (int k = i + 1;
-                                          k < arrayList.length;
-                                          k++) {
-                                        if (arrayList[i].grade_type_name ==
-                                                arrayList[k].grade_type_name &&
-                                            arrayList[i].description ==
-                                                arrayList[k].description) {
-                                          setState(() {
-                                            isSame = true;
-                                          });
-                                        }
-                                      }
-                                    }
-                                    if (isSame == false) {
-                                      selectedRow = arrayList.length;
-                                      // print(arrayList[arrayList.length - 1]
-                                      //     .casting_for
-                                      //     .toString());
-                                      // Map<String, dynamic> dataList1 = {
-                                      //   "grade_id": "",
-                                      //   "grade_type_name": "",
-                                      //   "casting_date": "",
-                                      //   "casting_for": "$castingRequirementFor",
-                                      //   "casting_unit_name": "",
-                                      //   "casting_unit": "",
-                                      //   "quantity": "",
-                                      //   "unit_price": "",
-                                      //   "total_amount": "",
-                                      //   "description": "",
-                                      //   "id": selectedRow
-                                      // };
-                                      // arrayList[index].casting_for.toString()
-                                      POformDataArrayList dataList1 =
-                                          POformDataArrayList(
-                                        brand_supplier_name: "",
-                                        grade_id: "",
-                                        grade_type_name: "",
-                                        casting_date:
-                                            arrayList[arrayList.length - 1]
-                                                .casting_date,
-                                        casting_for: arrayList[
-                                                arrayList.length - 1]
-                                            .casting_for
-                                            .toString(), // "$castingRequirementFor",
-                                        casting_unit_name: "",
-                                        casting_unit: "",
-                                        quantity: "",
-                                        unit_price: "",
-                                        total_amount: "0",
-                                        description: "",
-                                        id: selectedRow.toString(),
-                                        editingControllerGradeTypeName:
-                                            TextEditingController(),
-                                        editingControllerDescription:
-                                            TextEditingController(),
-                                        editingControllerCastingFor:
-                                            TextEditingController(),
-                                        editingControllerCastingDate:
-                                            TextEditingController(),
-                                        editingControllerQuantity:
-                                            TextEditingController(),
-                                        editingControllerCastingUnitName:
-                                            TextEditingController(),
-                                        editingControllerUnitPrice:
-                                            TextEditingController(),
-                                        editingControllerTotalAmount:
-                                            TextEditingController(),
-                                        editingControllerBrandName:
-                                            TextEditingController(),
-                                        // editingControllerPo: TextEditingController(),
-                                      );
-                                      setState(() {
-                                        arrayList.add(dataList1);
-                                        //_controller.jumpTo(_controller.position.maxScrollExtent);
-                                      });
-                                    } else {
-                                      Alert(
-                                          closeIcon: const SizedBox(),
-                                          padding:
-                                              const EdgeInsets.only(top: 0.0),
-                                          image: Image.asset(
-                                              'images/Icon-512.png',
-                                              height: 80,
-                                              fit: BoxFit.fitWidth),
-                                          style: const AlertStyle(
-                                              titleTextAlign: TextAlign.center,
-                                              descTextAlign: TextAlign.center,
-                                              descStyle: TextStyle(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontSize: 16),
-                                              isCloseButton: true),
-                                          context: context,
-                                          desc:
-                                              'Entered Description is Already Added',
-                                          alertAnimation: fadeAlertAnimation,
-                                          buttons: [
-                                            DialogButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              color: Colors.black,
-                                              child: const Text(
-                                                "CLOSE",
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 15),
-                                              ),
-                                            ),
-                                          ]).show();
-                                    }
-                                  },
-                                  // style: OutlinedButton.styleFrom(
-                                  //   fixedSize: const Size(200, 45),
-                                  // ),
-                                  child: Container(
+                        ListView.builder(
+                            physics: const NeverScrollableScrollPhysics(),
+                            //controller: _controller,
+                            shrinkWrap: true,
+                            reverse: false,
+                            itemCount: arrayList.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return Padding(
+                                padding: EdgeInsets.fromLTRB(8,
+                                    widget.poId == 'Verified' && index == 0 ? 4 : 8, 8, 8),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: Colors.white,
+                                    shape: BoxShape.rectangle,
+                                  ),
+                                  child: Padding(
                                     padding: EdgeInsets.only(
-                                        left: 20, right: 20, top: 9, bottom: 9),
-                                    decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(28),
-                                        border:
-                                            Border.all(color: Colors.black)),
-                                    child: const Text(
-                                      'Add More',
-                                      style: boldText,
+                                        left: context.accountCompact ? 12 : 40,
+                                        right: context.accountCompact ? 12 : 40,
+                                        bottom: widget.poId == 'Verified' ? 8 : 20),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        index != 0
+                                            ? AccountFlowRow(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.end,
+                                                children: [
+                                                  PoActionFeedback(
+                                                      child: IconButton(
+                                                    iconSize: 30,
+                                                    icon: const Icon(
+                                                      Icons.close_rounded,
+                                                    ),
+                                                    color: Colors.black,
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        arrayList
+                                                            .removeAt(index);
+                                                      });
+                                                    },
+                                                  )),
+                                                ],
+                                              )
+                                            : const SizedBox(height: 20),
+                                        _requirementType(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _description(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _selecteBrand(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _requirementFor(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _selectedReqDate(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _quantityUnit(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _unitPrice(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 8)
+                                            : verticalSpaceSmall15,
+                                        _totalPrice(index),
+                                        widget.poId == 'Verified'
+                                            ? const SizedBox(height: 4)
+                                            : verticalSpaceSmall15,
+                                      ],
                                     ),
                                   ),
-                                )
-                              : const SizedBox(),
-                          SizedBox(width: 10),
-                          InkWell(
-                            onTap: () {
-                              //  setState(() {
-                              //   isChecked = !isChecked;
-                              // });
-                              // setPoVerifyFlag();
-
-                              showDialog(
-                                  context: context,
-                                  // barrierDismissible: false,
-                                  builder: (context) {
-                                    return StatefulBuilder(
-                                        builder: (context1, setState2) {
-                                      return AlertDialog(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                              8), // Set radius to zero
-                                        ),
-                                        titlePadding:
-                                            const EdgeInsets.symmetric(
-                                                vertical: 0),
-                                        actionsPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 0),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16),
-                                        actionsAlignment:
-                                            MainAxisAlignment.center,
-                                        title: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 20),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.only(
-                                              topLeft: Radius.circular(8),
-                                              topRight: Radius.circular(8),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            "Are you sure, You want to ${isChecked ? 'uncheck' : 'check'} this PO?",
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                        actions: <Widget>[
-                                          Row(
-                                            children: [
-                                              InkWell(
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Container(
-                                                  width: 170,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 8),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.black,
-                                                    borderRadius:
-                                                        BorderRadius.only(
-                                                      // bottomRight: Radius.circular(8),
-                                                      bottomLeft:
-                                                          Radius.circular(8),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'NO',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 1),
-                                              InkWell(
-                                                onTap: () {
-                                                  // setPoAssignTo();
-                                                  setPoVerifyFlag(
-                                                      isCheck: isChecked
-                                                          ? "0"
-                                                          : "1");
-                                                },
-                                                child: Container(
-                                                  width: 170,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(vertical: 8),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.black,
-                                                    borderRadius:
-                                                        BorderRadius.only(
-                                                      bottomRight:
-                                                          Radius.circular(8),
-                                                      // bottomLeft: Radius.circular(8),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'YES',
-                                                    textAlign: TextAlign.center,
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          )
+                                ),
+                              );
+                            }),
+                        Container(
+                          width: widget.poId == 'Verified' ? double.infinity : null,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: widget.poId == 'Verified' ? 8 : (context.accountCompact ? 12 : 50)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Upload",
+                                  style: TextStyle(
+                                      fontSize: context.accountFont(14,
+                                          mobile: 14))), //
+                              AccountFlowRow(
+                                children: [
+                                  PoActionFeedback(
+                                      child: InkWell(
+                                    onTap: () async {
+                                      // if (arrayFiles.length != 4) {
+                                      FilePickerResult? result =
+                                          await FilePicker.platform.pickFiles(
+                                        type: FileType.custom,
+                                        allowedExtensions: [
+                                          'jpg',
+                                          'jpeg',
+                                          'png',
+                                          // "mp4",
+                                          "pdf",
                                         ],
-                                        // content: SizedBox(
-                                        //   height: 300,
-                                        //   width: 400,
-                                        // ),
                                       );
-                                    });
-                                  });
-                            },
-                            child: Container(
-                              padding: EdgeInsets.only(
-                                  left: 20, right: 20, top: 5, bottom: 5),
-                              decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.black)),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                      if (result != null) {
+                                        PlatformFile file = result.files.first;
+                                        Uint8List? fileBytes =
+                                            result.files.first.bytes;
+                                        String fileName =
+                                            result.files.first.name;
+                                        setState(() {
+                                          arrayFilesBytes.add(fileBytes);
+                                          arrayFiles.add(file);
+                                        });
+
+                                        //inspect(arrayFiles[0]);
+                                      } else {
+                                        // User canceled the picker
+                                      }
+                                      // }
+                                    },
+                                    child: Image.asset(
+                                      'images/projectmanagement/img5.png',
+                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                    ),
+                                  )),
+                                  const SizedBox(width: 10),
+                                  for (int j = 0;
+                                      j <
+                                          widget
+                                              .orderDetails!.poDocument!.length;
+                                      j++)
+                                    AccountFlowRow(
+                                      children: [
+                                        if (widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'jpg' ||
+                                            widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'jpeg' ||
+                                            widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'png') //'jpg','jpeg','png',
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                (useAccountManagementTestData
+                                                    ? Icon(
+                                                        Icons
+                                                            .description_outlined,
+                                                        size: widget.poId == 'Verified' ? 36 : 48,
+                                                        color: Colors.black54)
+                                                    : Image.network(
+                                                        '${AppUrl.poDocPath}${widget.orderDetails!.poDocument?[j]}',
+                                                        // ),
+                                                        // File(widget
+                                                        //     .orderDetails!.poDocument![j]),
+                                                        height: widget.poId == 'Verified' ? 64 : 100,
+                                                        width: widget.poId == 'Verified' ? 64 : 100,
+                                                        fit: BoxFit.fill,
+                                                      )),
+                                                // Positioned(
+                                                //   right: -10,
+                                                //   top: -10,
+                                                //   child: InkWell(
+                                                //     onTap: () {
+                                                //       // setState(() {
+                                                //       //   arrayFiles
+                                                //       //       .remove(arrayFiles[j]);
+                                                //       //   arrayFilesBytes
+                                                //       //       .remove(arrayFilesBytes[j]);
+                                                //       // });
+                                                //     },
+                                                //     child: const Icon(Icons.close),
+                                                //   ),
+                                                // )
+                                              ],
+                                            ),
+                                          ),
+                                        if (widget.orderDetails!.poDocument?[j]
+                                                .split('.')
+                                                .last
+                                                .toLowerCase() ==
+                                            'pdf')
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                PoActionFeedback(
+                                                    child: InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) {
+                                                          return (useAccountManagementTestData
+                                                              ? const AccountManagementPreviewDocumentScreen()
+                                                              : PdfViewer(
+                                                                  fileName: widget
+                                                                      .orderDetails!
+                                                                      .poDocument?[j],
+                                                                  fileUrl:
+                                                                      '${AppUrl.globalGrnPath}${widget.orderDetails!.poDocument?[j]}',
+
+                                                                  // isLocalFileUpload: false,
+                                                                  // localFiles:
+                                                                  //     arrayFiles[j].path,
+                                                                  // fileName: widget
+                                                                  //     .orderDetails!
+                                                                  //     .poDocument?[j],
+                                                                  // fileUrl: arrayFiles[j].path,
+                                                                ));
+                                                        },
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: Colors.grey,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    // width: 100,
+                                                    child: Image.asset(
+                                                      'images/projectmanagement/pdf.png',
+                                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                                    ),
+                                                  ),
+                                                )),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      // setState(() {
+                                                      //   arrayFiles
+                                                      //       .remove(arrayFiles[j]);
+                                                      //   arrayFilesBytes
+                                                      //       .remove(arrayFilesBytes[j]);
+                                                      // });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  const SizedBox(width: 10),
+                                  for (int j = 0; j < arrayFiles.length; j++)
+                                    AccountFlowRow(
+                                      children: [
+                                        if (arrayFiles[j].extension == 'jpg' ||
+                                            arrayFiles[j].extension == 'jpeg' ||
+                                            arrayFiles[j].extension ==
+                                                'png') //'jpg','jpeg','png',
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Image.file(
+                                                  File(
+                                                      arrayFiles[j].path ?? ''),
+                                                  height: widget.poId == 'Verified' ? 64 : 100,
+                                                  width: widget.poId == 'Verified' ? 64 : 100,
+                                                  fit: BoxFit.fill,
+                                                ),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        arrayFiles.remove(
+                                                            arrayFiles[j]);
+                                                        arrayFilesBytes.remove(
+                                                            arrayFilesBytes[j]);
+                                                      });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                        if (arrayFiles[j].extension == 'pdf')
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                PoActionFeedback(
+                                                    child: InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) {
+                                                          return (useAccountManagementTestData
+                                                              ? const AccountManagementPreviewDocumentScreen()
+                                                              : PdfViewer(
+                                                                  isLocalFileUpload:
+                                                                      true,
+                                                                  localFiles:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .path,
+                                                                  fileName:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .name,
+                                                                  fileUrl:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .path,
+                                                                ));
+                                                        },
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: Colors.grey,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    // width: 100,
+                                                    child: Image.asset(
+                                                      'images/projectmanagement/pdf.png',
+                                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                                    ),
+                                                  ),
+                                                )),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        arrayFiles.remove(
+                                                            arrayFiles[j]);
+                                                        arrayFilesBytes.remove(
+                                                            arrayFilesBytes[j]);
+                                                      });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        verticalSpaceSmall,
+                        Padding(
+                          padding: EdgeInsets.only(
+                              left: context.accountCompact ? 12 : 100,
+                              right: (context.accountCompact ? 12.0 : 70.0)),
+                          child: SizedBox(
+                              child: Column(
+                            children: [
+                              _poFormRow('Other Remarks',
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    isChecked
-                                        ? Icons.check_box_outlined
-                                        : Icons.check_box_outline_blank,
-                                    size: 30,
-                                    color: Colors.black,
+                                  SizedBox(
+                                    width: 150,
+                                    child: Text(
+                                        context.accountCompact
+                                            ? 'Other Remarks -'
+                                            : 'Other Remarks',
+                                        style: normalText),
                                   ),
-                                  SizedBox(width: 14),
-                                  Text(
-                                    isChecked ? "Checked" : "Check",
-                                    style: boldText,
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                          left: context.accountCompact ? 0 : 40,
+                                          right: 10,
+                                          top: 0),
+                                      child: SizedBox(
+                                        child: TextFormField(
+                                          enabled: widget.poId == 'Verified' ||
+                                              !flagBtnHideApproveReject,
+                                          controller: _txtControllerRemark,
+                                          minLines: widget.poId == 'Verified' ? 2 : null,
+                                          maxLines: widget.poId == 'Verified' ? 2 : 3,
+                                          onChanged: (String str) {
+                                            strRemark = str;
+                                          },
+                                          style: widget.poId == 'Verified'
+                                              ? normalText.copyWith(
+                                                  fontSize: context.accountFont(15, mobile: 12.6), height: 1.5)
+                                              : context.accountCompact
+                                                  ? normalText.copyWith(fontSize: 12.6)
+                                                  : normalText,
+                                          decoration: InputDecoration(
+                                            hintText: 'Enter Other Remarks',
+                                            filled: true,
+                                            fillColor: Colors.white,
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                    horizontal: context.accountCompact ? 12.6 : 14,
+                                                    vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 10.8 : 12)),
+                                            border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            disabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Colors.black)),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   )
                                 ],
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      verticalSpaceSmall,
-                    ],
-                  )),
-                ),
-              ]),
-            )
-          : const Center(child: CircularProgressIndicator()),
-      bottomNavigationBar: Row(
-        children: [
-          flagBtnHideApproveReject == false
-              ? Expanded(
-                  child: GestureDetector(
-                      onTap: () {
-                        showDialog<String>(
-                            context: context,
-                            builder: (BuildContext context) => AlertDialog(
-                                  title: const Text('Purchase Order'),
-                                  content: const Text(
-                                      'Are you sure you want to reject purchase order?',
-                                      style: TextStyle(
-                                          fontStyle: FontStyle.normal,
-                                          fontSize: 17.0)),
-                                  actions: <Widget>[
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.black,
-                                          fixedSize: const Size.fromWidth(100),
-                                          padding: const EdgeInsets.all(10),
-                                          textStyle: const TextStyle(
-                                              color: Colors.white)),
-                                      child: const Text('NO',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 16.0,
-                                              color: Colors.white)),
-                                      onPressed: () {
-                                        setState(() {
-                                          Navigator.pop(context);
-                                        });
-                                      },
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.black,
-                                          fixedSize: const Size.fromWidth(100),
-                                          padding: const EdgeInsets.all(10),
-                                          textStyle: const TextStyle(
-                                              color: Colors.white)),
-                                      child: const Text('YES',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 14.0,
-                                              color: Colors.white)),
-                                      onPressed: () {
-                                        setState(() {
-                                          Navigator.pop(context);
-
-                                          showDialog(
-                                            context: context,
-                                            barrierDismissible: false,
-                                            builder: (BuildContext context) {
-                                              dialogContext = context;
-                                              return const Center(
-                                                child: SizedBox(
-                                                  height: 200,
-                                                  width: 200,
-                                                  child: Dialog(
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        verticalSpaceSmall,
-                                                        CircularProgressIndicator(),
-                                                        verticalSpaceSmall,
-                                                        Text("Loading"),
-                                                        verticalSpaceSmall,
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
+                              verticalSpaceSmall,
+                              AccountFlowRow(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  flagBtnHideApproveReject == false
+                                      ? InkWell(
+                                          onTap: () {
+                                            bool isSame = false;
+                                            for (var i = 0;
+                                                i < arrayList.length;
+                                                i++) {
+                                              for (int k = i + 1;
+                                                  k < arrayList.length;
+                                                  k++) {
+                                                if (arrayList[i]
+                                                            .grade_type_name ==
+                                                        arrayList[k]
+                                                            .grade_type_name &&
+                                                    arrayList[i].description ==
+                                                        arrayList[k]
+                                                            .description) {
+                                                  setState(() {
+                                                    isSame = true;
+                                                  });
+                                                }
+                                              }
+                                            }
+                                            if (isSame == false) {
+                                              selectedRow = arrayList.length;
+                                              // print(arrayList[arrayList.length - 1]
+                                              //     .casting_for
+                                              //     .toString());
+                                              // Map<String, dynamic> dataList1 = {
+                                              //   "grade_id": "",
+                                              //   "grade_type_name": "",
+                                              //   "casting_date": "",
+                                              //   "casting_for": "$castingRequirementFor",
+                                              //   "casting_unit_name": "",
+                                              //   "casting_unit": "",
+                                              //   "quantity": "",
+                                              //   "unit_price": "",
+                                              //   "total_amount": "",
+                                              //   "description": "",
+                                              //   "id": selectedRow
+                                              // };
+                                              // arrayList[index].casting_for.toString()
+                                              POformDataArrayList dataList1 =
+                                                  POformDataArrayList(
+                                                brand_supplier_name: "",
+                                                grade_id: "",
+                                                grade_type_name: "",
+                                                casting_date: arrayList[
+                                                        arrayList.length - 1]
+                                                    .casting_date,
+                                                casting_for: arrayList[
+                                                        arrayList.length - 1]
+                                                    .casting_for
+                                                    .toString(), // "$castingRequirementFor",
+                                                casting_unit_name: "",
+                                                casting_unit: "",
+                                                quantity: "",
+                                                unit_price: "",
+                                                total_amount: "0",
+                                                description: "",
+                                                id: selectedRow.toString(),
+                                                editingControllerGradeTypeName:
+                                                    TextEditingController(),
+                                                editingControllerDescription:
+                                                    TextEditingController(),
+                                                editingControllerCastingFor:
+                                                    TextEditingController(),
+                                                editingControllerCastingDate:
+                                                    TextEditingController(),
+                                                editingControllerQuantity:
+                                                    TextEditingController(),
+                                                editingControllerCastingUnitName:
+                                                    TextEditingController(),
+                                                editingControllerUnitPrice:
+                                                    TextEditingController(),
+                                                editingControllerTotalAmount:
+                                                    TextEditingController(),
+                                                editingControllerBrandName:
+                                                    TextEditingController(),
+                                                // editingControllerPo: TextEditingController(),
                                               );
-                                            },
-                                          );
-                                          submitRejectPurchaseOrder();
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ));
-                      },
-                      child: Container(
-                          padding: const EdgeInsets.only(top: 13),
-                          height: 50,
-                          color: Colors.black,
-                          child: const Text(
-                            'REJECT PO',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ))),
-                )
-              : const SizedBox(),
-          flagBtnHideApproveReject == false
-              ? const SizedBox(width: 2)
-              : const SizedBox(),
-          flagBtnHideApproveReject == false
-              ? Expanded(
-                  child: GestureDetector(
-                      onTap: () {
-                        var flag = true;
-                        String msg = "";
-                        for (var i = 0; i < arrayList.length; i++) {
-                          if (arrayList[i].grade_id.toString() == "") {
-                            msg = 'Please select Requirement type.';
-                            flag = false;
-                          } else if (arrayList[i].description.toString() ==
-                              "") {
-                            msg = 'Please enter description.';
-                            flag = false;
-                          } else if (arrayList[i].casting_for.toString() ==
-                              "") {
-                            msg = 'Please enter requirement for.';
-                            flag = false;
-                          } else if (arrayList[i].casting_date.toString() ==
-                              "") {
-                            msg = 'Please select requirement date.';
-                            flag = false;
-                          } else if (arrayList[i].quantity.toString() == "") {
-                            msg = 'Please enter a quantity.';
-                            flag = false;
-                          } else if (arrayList[i].casting_unit.toString() ==
-                              "") {
-                            msg = 'Please select unit.';
-                            flag = false;
-                          }
-                        }
-                        print(jsonEncode(arrayList));
-                        if (flag == false) {
-                          showDialog<String>(
-                              context: context,
-                              builder: (BuildContext context) => AlertDialog(
-                                    title: const Text(''),
-                                    content: Text(msg,
-                                        style: const TextStyle(
-                                            fontStyle: FontStyle.normal,
-                                            fontSize: 17.0)),
-                                    actions: <Widget>[
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.black,
-                                            fixedSize:
-                                                const Size.fromWidth(100),
-                                            padding: const EdgeInsets.all(10),
-                                            textStyle: const TextStyle(
-                                                color: Colors.white)),
-                                        child: const Text('CLOSE',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.normal,
-                                                fontSize: 14.0,
-                                                color: Colors.white)),
-                                        onPressed: () {
-                                          setState(() {
-                                            Navigator.pop(context);
-                                          });
-                                        },
-                                      ),
-                                    ],
-                                  ));
-                        } else {
-                          bool isSame = false;
-                          for (var i = 0; i < arrayList.length; i++) {
-                            for (int k = i + 1; k < arrayList.length; k++) {
-                              if (arrayList[i].grade_type_name ==
-                                      arrayList[k].grade_type_name &&
-                                  arrayList[i].description ==
-                                      arrayList[k].description) {
-                                setState(() {
-                                  isSame = true;
-                                });
-                              }
-                            }
-                          }
+                                              setState(() {
+                                                arrayList.add(dataList1);
+                                                //_controller.jumpTo(_controller.position.maxScrollExtent);
+                                              });
+                                            } else {
+                                              Alert(
+                                                  closeIcon: const SizedBox(),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 0.0),
+                                                  image: Image.asset(
+                                                      'images/Icon-512.png',
+                                                      height: 80,
+                                                      fit: BoxFit.fitWidth),
+                                                  style: AlertStyle(
+                                                      titleTextAlign:
+                                                          TextAlign.center,
+                                                      descTextAlign:
+                                                          TextAlign.center,
+                                                      descStyle: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.normal,
+                                                          fontSize: context
+                                                              .accountFont(16,
+                                                                  mobile: 14)),
+                                                      isCloseButton: true),
+                                                  context: context,
+                                                  desc:
+                                                      'Entered Description is Already Added',
+                                                  alertAnimation:
+                                                      fadeAlertAnimation,
+                                                  buttons: [
+                                                    DialogButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context),
+                                                      color: Colors.black,
+                                                      child: Text(
+                                                        "CLOSE",
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile:
+                                                                        14)),
+                                                      ),
+                                                    ),
+                                                  ]).show();
+                                            }
+                                          },
+                                          // style: OutlinedButton.styleFrom(
+                                          //   fixedSize: const Size(200, 45),
+                                          // ),
+                                          child: Container(
+                                            padding: EdgeInsets.only(
+                                                left: 20,
+                                                right: 20,
+                                                top: 9,
+                                                bottom: 9),
+                                            decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(999)),
+                                                border: Border.all(
+                                                    color: Colors.black)),
+                                            child: const Text(
+                                              'Add More',
+                                              style: boldText,
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox(),
+                                  SizedBox(width: 10),
+                                  InkWell(
+                                    onTap: () {
+                                      //  setState(() {
+                                      //   isChecked = !isChecked;
+                                      // });
+                                      // setPoVerifyFlag();
 
-                          if (isSame == false) {
-                            showDialog<String>(
-                                context: context,
-                                builder: (BuildContext context) => AlertDialog(
-                                      elevation: 0,
-                                      shadowColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                            8), // Set radius to zero
-                                      ),
-                                      titlePadding: const EdgeInsets.symmetric(
-                                          vertical: 0),
-                                      actionsPadding:
-                                          const EdgeInsets.only(bottom: 0),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                              horizontal: 0),
-                                      actionsAlignment:
-                                          MainAxisAlignment.center,
-                                      title: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 5),
-                                        decoration: const BoxDecoration(
+                                      _showCheckConfirmation();
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.only(
+                                          left: 20,
+                                          right: 20,
+                                          top: widget.poId == 'Verified' ? 4.5 : 5,
+                                          bottom: widget.poId == 'Verified' ? 4.5 : 5),
+                                      decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.all(
+                                              Radius.circular(999)),
+                                          border:
+                                              Border.all(color: Colors.black)),
+                                      child: AccountFlowRow(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            isChecked
+                                                ? Icons.check_box
+                                                : Icons.check_box_outline_blank,
+                                            size: widget.poId == 'Verified' ? 29 : 30,
                                             color: Colors.black,
-                                            borderRadius: BorderRadius.only(
-                                                topLeft: Radius.circular(8),
-                                                topRight: Radius.circular(8))),
-                                        child: const Text(
-                                          "Are you Sure, You want to Update an Order?",
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600),
-                                          textAlign: TextAlign.center,
-                                        ),
+                                          ),
+                                          SizedBox(width: 14),
+                                          Text(
+                                            isChecked ? "Checked" : "Check",
+                                            style: widget.poId == 'Verified'
+                                                ? boldText.copyWith(fontSize: 15) : boldText,
+                                          )
+                                        ],
                                       ),
-                                      // title: const Text('Purchase Order'),
-                                      content: Container(
-                                        height: 100,
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              "Credit Limit",
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              verticalSpaceSmall,
+                            ],
+                          )),
+                        ),
+                      ]),
+                    )
+                  : const AccountSkeleton(),
+              bottomNavigationBar: AccountFlowRow(
+                children: [
+                  flagBtnHideApproveReject == false
+                      ? Expanded(
+                          child: GestureDetector(
+                              onTap: () {
+                                _showPoDialog<String>(
+                                    context: context,
+                                    builder: (BuildContext context) =>
+                                        AlertDialog(
+                                          clipBehavior: Clip.antiAlias,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16)),
+                                          surfaceTintColor: Colors.transparent,
+                                          title: const Text('Purchase Order'),
+                                          content: Text(
+                                              'Are you sure you want to reject purchase order?',
                                               style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            ),
-                                            SizedBox(width: 14),
-                                            Container(
-                                              width: 200,
-                                              child: TextFormField(
-                                                controller: creditControler,
-                                                style: const TextStyle(
-                                                    color: Colors.black,
-                                                    fontSize: 13.0),
-                                                decoration:
-                                                    const InputDecoration(
-                                                  contentPadding:
-                                                      EdgeInsets.all(12.0),
-                                                  border: OutlineInputBorder(
-                                                      borderSide: BorderSide(
-                                                          color: Colors.black)),
-                                                  hintText:
-                                                      'Enter Credit Limit',
-                                                  hintStyle: TextStyle(
-                                                    color: Color.fromARGB(
-                                                        255, 116, 116, 116),
-                                                    fontSize: 13.0,
-                                                    fontWeight: FontWeight.w200,
-                                                    fontFamily: 'HelveticaNeue',
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: 14),
-                                            Text(
-                                              "Days",
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w400,
-                                              ),
-                                            )
-                                          ],
-                                        ),
-                                      ),
-
-                                      actions: <Widget>[
-                                        Row(
-                                          children: [
-                                            InkWell(
-                                              onTap: () {
-                                                Navigator.pop(context);
-                                              },
-                                              child: Container(
-                                                width: 180,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 4),
-                                                decoration: const BoxDecoration(
-                                                    color: Colors.black,
-                                                    border: Border(
-                                                        right: BorderSide(
-                                                            color: Colors
-                                                                .white)),
-                                                    borderRadius:
-                                                        BorderRadius.only(
-                                                            bottomLeft:
-                                                                Radius.circular(
-                                                                    8))),
-                                                child: const Text(
-                                                  "NO",
+                                                  fontStyle: FontStyle.normal,
+                                                  fontSize: context.accountFont(
+                                                      17.0,
+                                                      mobile: 14))),
+                                          actions: <Widget>[
+                                            PoActionFeedback(
+                                                child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                  shape: const StadiumBorder(),
+                                                  backgroundColor: Colors.black,
+                                                  fixedSize:
+                                                      const Size.fromWidth(100),
+                                                  padding:
+                                                      const EdgeInsets.all(10),
+                                                  textStyle: const TextStyle(
+                                                      color: Colors.white)),
+                                              child: Text('NO',
                                                   style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white,
-                                                  ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                            ),
-                                            InkWell(
-                                              onTap: () {
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                      fontSize: context
+                                                          .accountFont(16.0,
+                                                              mobile: 14),
+                                                      color: Colors.white)),
+                                              onPressed: () {
+                                                setState(() {
+                                                  Navigator.pop(context);
+                                                });
+                                              },
+                                            )),
+                                            PoActionFeedback(
+                                                child: ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                  shape: const StadiumBorder(),
+                                                  backgroundColor: Colors.black,
+                                                  fixedSize:
+                                                      const Size.fromWidth(100),
+                                                  padding:
+                                                      const EdgeInsets.all(10),
+                                                  textStyle: const TextStyle(
+                                                      color: Colors.white)),
+                                              child: Text('YES',
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                      fontSize: context
+                                                          .accountFont(14.0,
+                                                              mobile: 14),
+                                                      color: Colors.white)),
+                                              onPressed: () {
                                                 setState(() {
                                                   Navigator.pop(context);
 
-                                                  showDialog(
+                                                  _showPoDialog(
                                                     context: context,
                                                     barrierDismissible: false,
                                                     builder:
                                                         (BuildContext context) {
                                                       dialogContext = context;
-                                                      return const Center(
+                                                      return Center(
                                                         child: SizedBox(
                                                           height: 200,
-                                                          width: 200,
+                                                          width: context
+                                                                  .accountCompact
+                                                              ? 100
+                                                              : 200,
                                                           child: Dialog(
+                                                            clipBehavior:
+                                                                Clip.antiAlias,
+                                                            shape: RoundedRectangleBorder(
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            16)),
+                                                            surfaceTintColor:
+                                                                Colors
+                                                                    .transparent,
                                                             child: Column(
                                                               mainAxisAlignment:
                                                                   MainAxisAlignment
@@ -2564,461 +2342,1001 @@ class _PoDetailsState extends State<PoDetails> {
                                                       );
                                                     },
                                                   );
-                                                  submitOkToOrderPurchaseOrder(
-                                                      context);
+                                                  submitRejectPurchaseOrder();
                                                 });
                                               },
-                                              child: Container(
-                                                width: 180,
+                                            )),
+                                          ],
+                                        ));
+                              },
+                              child: Container(
+                                  padding: const EdgeInsets.only(top: 13),
+                                  height: 50,
+                                  color: Colors.black,
+                                  child: const Text(
+                                    'REJECT PO',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ))),
+                        )
+                      : const SizedBox(),
+                  flagBtnHideApproveReject == false
+                      ? const SizedBox(width: 2)
+                      : const SizedBox(),
+                  flagBtnHideApproveReject == false
+                      ? Expanded(
+                          child: GestureDetector(
+                              onTap: () {
+                                var flag = true;
+                                String msg = "";
+                                for (var i = 0; i < arrayList.length; i++) {
+                                  if (arrayList[i].grade_id.toString() == "") {
+                                    msg = 'Please select Requirement type.';
+                                    flag = false;
+                                  } else if (arrayList[i]
+                                          .description
+                                          .toString() ==
+                                      "") {
+                                    msg = 'Please enter description.';
+                                    flag = false;
+                                  } else if (arrayList[i]
+                                          .casting_for
+                                          .toString() ==
+                                      "") {
+                                    msg = 'Please enter requirement for.';
+                                    flag = false;
+                                  } else if (arrayList[i]
+                                          .casting_date
+                                          .toString() ==
+                                      "") {
+                                    msg = 'Please select requirement date.';
+                                    flag = false;
+                                  } else if (arrayList[i].quantity.toString() ==
+                                      "") {
+                                    msg = 'Please enter a quantity.';
+                                    flag = false;
+                                  } else if (arrayList[i]
+                                          .casting_unit
+                                          .toString() ==
+                                      "") {
+                                    msg = 'Please select unit.';
+                                    flag = false;
+                                  }
+                                }
+                                print(jsonEncode(arrayList));
+                                if (flag == false) {
+                                  _showPoDialog<String>(
+                                      context: context,
+                                      builder: (BuildContext context) =>
+                                          AlertDialog(
+                                            clipBehavior: Clip.antiAlias,
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16)),
+                                            surfaceTintColor:
+                                                Colors.transparent,
+                                            title: const Text(''),
+                                            content: Text(msg,
+                                                style: TextStyle(
+                                                    fontStyle: FontStyle.normal,
+                                                    fontSize: context
+                                                        .accountFont(17.0,
+                                                            mobile: 14))),
+                                            actions: <Widget>[
+                                              PoActionFeedback(
+                                                  child: ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                    shape:
+                                                        const StadiumBorder(),
+                                                    backgroundColor:
+                                                        Colors.black,
+                                                    fixedSize:
+                                                        const Size.fromWidth(
+                                                            100),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            10),
+                                                    textStyle: const TextStyle(
+                                                        color: Colors.white)),
+                                                child: Text('CLOSE',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.normal,
+                                                        fontSize: context
+                                                            .accountFont(14.0,
+                                                                mobile: 14),
+                                                        color: Colors.white)),
+                                                onPressed: () {
+                                                  setState(() {
+                                                    Navigator.pop(context);
+                                                  });
+                                                },
+                                              )),
+                                            ],
+                                          ));
+                                } else {
+                                  bool isSame = false;
+                                  for (var i = 0; i < arrayList.length; i++) {
+                                    for (int k = i + 1;
+                                        k < arrayList.length;
+                                        k++) {
+                                      if (arrayList[i].grade_type_name ==
+                                              arrayList[k].grade_type_name &&
+                                          arrayList[i].description ==
+                                              arrayList[k].description) {
+                                        setState(() {
+                                          isSame = true;
+                                        });
+                                      }
+                                    }
+                                  }
+
+                                  if (isSame == false) {
+                                    _showPoDialog<String>(
+                                        context: context,
+                                        builder: (BuildContext context) =>
+                                            AlertDialog(
+                                              clipBehavior: Clip.antiAlias,
+                                              surfaceTintColor:
+                                                  Colors.transparent,
+                                              elevation: 0,
+                                              shadowColor: Colors.white,
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          16)),
+                                              titlePadding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 0),
+                                              actionsPadding:
+                                                  const EdgeInsets.only(
+                                                      bottom: 0),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 0),
+                                              actionsAlignment:
+                                                  MainAxisAlignment.center,
+                                              title: Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                        vertical: 4),
+                                                        vertical: 5),
                                                 decoration: const BoxDecoration(
                                                     color: Colors.black,
                                                     borderRadius:
                                                         BorderRadius.only(
-                                                            bottomRight:
+                                                            topLeft: Radius
+                                                                .circular(8),
+                                                            topRight:
                                                                 Radius.circular(
                                                                     8))),
-                                                child: const Text(
-                                                  "YES",
+                                                child: Text(
+                                                  "Are you Sure, You want to Update an Order?",
                                                   style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white,
-                                                  ),
+                                                      color: Colors.white,
+                                                      fontSize: context
+                                                          .accountFont(18,
+                                                              mobile: 14),
+                                                      fontWeight:
+                                                          FontWeight.w600),
                                                   textAlign: TextAlign.center,
                                                 ),
                                               ),
-                                            ),
-                                          ],
-                                        )
-                                      ],
-                                    ));
-                            // Alert(
-                            //     closeIcon: const SizedBox(),
-                            //     padding: const EdgeInsets.only(
-                            //         top: 0.0, left: 24, right: 24),
-                            //     image: Image.asset('images/Icon-512.png',
-                            //         height: 80, fit: BoxFit.fitWidth),
-                            //     style: const AlertStyle(
-                            //         titleTextAlign: TextAlign.center,
-                            //         descTextAlign: TextAlign.center,
-                            //         descStyle: TextStyle(
-                            //             fontWeight: FontWeight.normal,
-                            //             fontSize: 16),
-                            //         isCloseButton: true),
-                            //     context: context,
-                            //     desc:
-                            //         'Are you sure you want to update an order?',
-                            //     alertAnimation: fadeAlertAnimation,
-                            //     buttons: [
-                            //       DialogButton(
-                            //         onPressed: () => Navigator.pop(context),
-                            //         color: Colors.black,
-                            //         child: const Text(
-                            //           "NO",
-                            //           style: TextStyle(
-                            //               color: Colors.white, fontSize: 15),
-                            //         ),
-                            //       ),
-                            //       DialogButton(
-                            //         onPressed: () {
-                            //           Navigator.pop(context);
-                            //           // context.loaderOverlay.show();
-                            //           // wsworkordersubmit();
-                            //         },
-                            //         color: Colors.black,
-                            //         child: const Text(
-                            //           "YES",
-                            //           style: TextStyle(
-                            //               color: Colors.white, fontSize: 15),
-                            //         ),
-                            //       ),
-                            //     ]).show();
-                          } else {
-                            Alert(
-                                closeIcon: const SizedBox(),
-                                padding: const EdgeInsets.only(
-                                    top: 0.0, left: 18, right: 18),
-                                image: Image.asset('images/Icon-512.png',
-                                    height: 80, fit: BoxFit.fitWidth),
-                                style: const AlertStyle(
-                                    titleTextAlign: TextAlign.center,
-                                    descTextAlign: TextAlign.center,
-                                    descStyle: TextStyle(
-                                        fontWeight: FontWeight.normal,
-                                        fontSize: 16),
-                                    isCloseButton: true),
-                                context: context,
-                                desc: 'Entered Description is Already Added',
-                                alertAnimation: fadeAlertAnimation,
-                                buttons: [
-                                  DialogButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    color: Colors.black,
-                                    child: const Text(
-                                      "CLOSE",
-                                      style: TextStyle(
-                                          color: Colors.white, fontSize: 15),
-                                    ),
-                                  ),
-                                ]).show();
-                          }
-                        }
-                      },
-                      child: Container(
-                          padding: const EdgeInsets.only(top: 13),
-                          height: 50,
-                          color: Colors.black,
-                          child: const Text(
-                            'OK TO ORDER',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ))))
-              : const SizedBox(),
-          flagBtnHideApproveReject == true
-              ? Expanded(
-                  child: Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          if (
-                              // (widget.orderDetails?.poAssingTo == "0" ||
-                              //       widget.orderDetails?.poAssingTo == "") &&
-                              purchaseUserTrack != '0') {
-                            chooseAssignToModal();
-                          }
-                        },
-                        child: Container(
-                            padding: const EdgeInsets.only(top: 13),
-                            height: 50,
-                            decoration: BoxDecoration(
-                              border: Border(
-                                right: BorderSide(color: Colors.white),
-                              ),
-                              color:
-                                  // (
-                                  //   widget.orderDetails?.poAssingTo == "0" ||
-                                  //             widget.orderDetails?.poAssingTo ==
-                                  //                 "") &&
-                                  purchaseUserTrack != '0'
-                                      ? Colors.black
-                                      : Colors.grey,
-                            ),
-                            child: const Text(
-                              'ASSIGN TO',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            )),
-                      ),
-                    ),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          showDialog(
-                              // barrierDismissible: false,
-                              context: context,
-                              builder: (BuildContext context) =>
-                                  StatefulBuilder(builder: (context, setState) {
-                                    return Dialog(
-                                      elevation: 0,
-                                      child: SizedBox(
-                                        height: 400,
-                                        width: 360.0,
-                                        child: Column(
-                                          children: [
-                                            const Padding(
-                                              padding: EdgeInsets.only(
-                                                  top: 10.0, bottom: 5),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'SELECT VENDOR',
-                                                    style: TextStyle(
+                                              // title: const Text('Purchase Order'),
+                                              content: Container(
+                                                height: 100,
+                                                child: AccountFlowRow(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      "Credit Limit",
+                                                      style: TextStyle(
+                                                        fontSize: context
+                                                            .accountFont(16,
+                                                                mobile: 14),
                                                         fontWeight:
-                                                            FontWeight.bold),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            Divider(
-                                              color: Colors.grey.shade500,
-                                              thickness: 1.5,
-                                            ),
-                                            SizedBox(
-                                              height: 300,
-                                              width: 360,
-                                              child: ListView.builder(
-                                                  itemCount: searchData!.length,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    bool selected = false;
-                                                    if (searchData![index]
-                                                            .sendStatus! ==
-                                                        '0') {
-                                                      String vendorId =
-                                                          searchData![index]
-                                                              .selectId!;
-                                                      for (int i = 0;
-                                                          i <
-                                                              searchDataSelected
-                                                                  .length;
-                                                          i++) {
-                                                        if (vendorId ==
-                                                            searchDataSelected[
-                                                                        i][
-                                                                    "vendor_id"]
-                                                                .toString()) {
-                                                          selected = true;
-                                                          break;
-                                                        }
-                                                      }
-                                                    }
-                                                    return Column(
-                                                      children: [
-                                                        InkWell(
-                                                          onTap: () {
-                                                            bool flag = false;
-                                                            String vendorId =
-                                                                searchData![
-                                                                        index]
-                                                                    .selectId!;
-                                                            for (int i = 0;
-                                                                i <
-                                                                    searchDataSelected
-                                                                        .length;
-                                                                i++) {
-                                                              if (vendorId ==
-                                                                  searchDataSelected[
-                                                                              i]
-                                                                          [
-                                                                          "vendor_id"]
-                                                                      .toString()) {
-                                                                if (searchData![
-                                                                            index]
-                                                                        .sendStatus! ==
-                                                                    '0') {
-                                                                  searchDataSelected
-                                                                      .removeAt(
-                                                                          i);
-                                                                  setState(() {
-                                                                    searchData
-                                                                        ?.length;
-                                                                  });
-                                                                  flag = true;
-                                                                  break;
-                                                                }
-                                                              }
-                                                            }
-                                                            if (flag == false) {
-                                                              if (searchData![
-                                                                          index]
-                                                                      .sendStatus! ==
-                                                                  '0') {
-                                                                Map<String,
-                                                                        String>
-                                                                    data = {
-                                                                  "vendor_id":
-                                                                      searchData![
-                                                                              index]
-                                                                          .selectId!,
-                                                                };
-                                                                searchDataSelected
-                                                                    .add(data);
-                                                                setState(() {
-                                                                  searchData
-                                                                      ?.length;
-                                                                });
-                                                              } else {
-                                                                showDialog<
-                                                                        String>(
-                                                                    context:
-                                                                        context,
-                                                                    builder: (BuildContext
-                                                                            context) =>
-                                                                        AlertDialog(
-                                                                          title:
-                                                                              const Text(''),
-                                                                          content: const Text(
-                                                                              'Already PO Quote is being send.',
-                                                                              style: TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
-                                                                          actions: <Widget>[
-                                                                            ElevatedButton(
-                                                                              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, fixedSize: const Size.fromWidth(100), padding: const EdgeInsets.all(10), textStyle: const TextStyle(color: Colors.white)),
-                                                                              child: const Text('CLOSE', style: TextStyle(fontWeight: FontWeight.normal, fontSize: 14.0, color: Colors.white)),
-                                                                              onPressed: () {
-                                                                                setState(() {
-                                                                                  Navigator.pop(context);
-                                                                                });
-                                                                              },
-                                                                            ),
-                                                                          ],
-                                                                        ));
-                                                              }
-                                                            }
-                                                            //Navigator.of(
-                                                            // context)
-                                                            //.pop();
-                                                          },
-                                                          child: Row(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .spaceBetween,
-                                                              children: [
-                                                                Padding(
-                                                                  padding: const EdgeInsets
-                                                                      .only(
-                                                                      left:
-                                                                          10.0,
-                                                                      bottom:
-                                                                          20.0,
-                                                                      top:
-                                                                          15.0),
-                                                                  child: Text(searchData![
-                                                                          index]
-                                                                      .selectName!),
-                                                                ),
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets
-                                                                          .only(
-                                                                          right:
-                                                                              10.0),
-                                                                  child: Icon(
-                                                                    searchData![index].sendStatus! ==
-                                                                            "1"
-                                                                        ? Icons
-                                                                            .check_circle_outline_sharp
-                                                                        : selected ==
-                                                                                true
-                                                                            ? Icons.check_circle_outline_sharp
-                                                                            : Icons.circle_outlined,
-                                                                    color: searchData![index].sendStatus! ==
-                                                                            "1"
-                                                                        ? Colors
-                                                                            .grey
-                                                                        : selected ==
-                                                                                true
-                                                                            ? Colors.green
-                                                                            : Colors.black,
-                                                                    size: 26,
-                                                                  ),
-                                                                ),
-                                                              ]),
-                                                        ),
-                                                        const Divider(
-                                                          height: 1,
-                                                          thickness: 0.5,
-                                                          color: Colors.black,
-                                                        ),
-                                                      ],
-                                                    );
-                                                  }),
-                                            ),
-                                            Expanded(
-                                              child: InkWell(
-                                                onTap: () {
-                                                  Navigator.of(context).pop();
-
-                                                  showDialog(
-                                                    context: context,
-                                                    // barrierDismissible: false,
-                                                    builder:
-                                                        (BuildContext context) {
-                                                      dialogContext = context;
-                                                      return const Center(
-                                                        child: SizedBox(
-                                                          height: 200,
-                                                          width: 200,
-                                                          child: Dialog(
-                                                            child: Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
-                                                              children: [
-                                                                verticalSpaceSmall,
-                                                                CircularProgressIndicator(),
-                                                                verticalSpaceSmall,
-                                                                Text("Loading"),
-                                                                verticalSpaceSmall,
-                                                              ],
-                                                            ),
+                                                            FontWeight.w400,
+                                                      ),
+                                                    ),
+                                                    SizedBox(width: 14),
+                                                    Container(
+                                                      width:
+                                                          context.accountCompact
+                                                              ? 100
+                                                              : 200,
+                                                      child: TextFormField(
+                                                        controller:
+                                                            creditControler,
+                                                        style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize: context
+                                                                .accountFont(
+                                                                    13.0,
+                                                                    mobile:
+                                                                        13)),
+                                                        decoration:
+                                                            InputDecoration(
+                                                          contentPadding:
+                                                              EdgeInsets.all(
+                                                                  12.0),
+                                                          border: OutlineInputBorder(
+                                                              borderSide: BorderSide(
+                                                                  color: Colors
+                                                                      .black)),
+                                                          hintText:
+                                                              'Enter Credit Limit',
+                                                          hintStyle: TextStyle(
+                                                            color:
+                                                                Color.fromARGB(
+                                                                    255,
+                                                                    116,
+                                                                    116,
+                                                                    116),
+                                                            fontSize: context
+                                                                .accountFont(
+                                                                    13.0,
+                                                                    mobile: 13),
+                                                            fontWeight:
+                                                                FontWeight.w200,
+                                                            fontFamily:
+                                                                'HelveticaNeue',
                                                           ),
                                                         ),
-                                                      );
-                                                    },
-                                                  );
-
-                                                  submitPurchaseOrderRequestion();
-                                                },
-                                                child: Container(
-                                                  width: double.infinity,
-                                                  color: Colors.black,
-                                                  child: const Padding(
-                                                    padding: EdgeInsets.only(
-                                                        top: 13.0),
-                                                    child: Text(
-                                                      'REQUEST QUOTE',
-                                                      style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 15),
-                                                      textAlign:
-                                                          TextAlign.center,
+                                                      ),
                                                     ),
-                                                  ),
+                                                    SizedBox(width: 14),
+                                                    Text(
+                                                      "Days",
+                                                      style: TextStyle(
+                                                        fontSize: context
+                                                            .accountFont(16,
+                                                                mobile: 14),
+                                                        fontWeight:
+                                                            FontWeight.w400,
+                                                      ),
+                                                    )
+                                                  ],
                                                 ),
                                               ),
+
+                                              actions: <Widget>[
+                                                AccountFlowRow(
+                                                  children: [
+                                                    PoActionFeedback(
+                                                        child: InkWell(
+                                                      onTap: () {
+                                                        Navigator.pop(context);
+                                                      },
+                                                      child: Container(
+                                                        width: 180,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 4),
+                                                        decoration: const BoxDecoration(
+                                                            color: Colors.black,
+                                                            border: Border(
+                                                                right: BorderSide(
+                                                                    color: Colors
+                                                                        .white)),
+                                                            borderRadius:
+                                                                BorderRadius.only(
+                                                                    bottomLeft:
+                                                                        Radius.circular(
+                                                                            8))),
+                                                        child: Text(
+                                                          "NO",
+                                                          style: TextStyle(
+                                                            fontSize: context
+                                                                .accountFont(16,
+                                                                    mobile: 14),
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.white,
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                      ),
+                                                    )),
+                                                    PoActionFeedback(
+                                                        child: InkWell(
+                                                      onTap: () {
+                                                        setState(() {
+                                                          Navigator.pop(
+                                                              context);
+
+                                                          _showPoDialog(
+                                                            context: context,
+                                                            barrierDismissible:
+                                                                false,
+                                                            builder:
+                                                                (BuildContext
+                                                                    context) {
+                                                              dialogContext =
+                                                                  context;
+                                                              return Center(
+                                                                child: SizedBox(
+                                                                  height: 200,
+                                                                  width: context
+                                                                          .accountCompact
+                                                                      ? 100
+                                                                      : 200,
+                                                                  child: Dialog(
+                                                                    clipBehavior:
+                                                                        Clip.antiAlias,
+                                                                    shape: RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(16)),
+                                                                    surfaceTintColor:
+                                                                        Colors
+                                                                            .transparent,
+                                                                    child:
+                                                                        Column(
+                                                                      mainAxisAlignment:
+                                                                          MainAxisAlignment
+                                                                              .center,
+                                                                      children: [
+                                                                        verticalSpaceSmall,
+                                                                        CircularProgressIndicator(),
+                                                                        verticalSpaceSmall,
+                                                                        Text(
+                                                                            "Loading"),
+                                                                        verticalSpaceSmall,
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              );
+                                                            },
+                                                          );
+                                                          submitOkToOrderPurchaseOrder(
+                                                              context);
+                                                        });
+                                                      },
+                                                      child: Container(
+                                                        width: 180,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 4),
+                                                        decoration: const BoxDecoration(
+                                                            color: Colors.black,
+                                                            borderRadius:
+                                                                BorderRadius.only(
+                                                                    bottomRight:
+                                                                        Radius.circular(
+                                                                            8))),
+                                                        child: Text(
+                                                          "YES",
+                                                          style: TextStyle(
+                                                            fontSize: context
+                                                                .accountFont(16,
+                                                                    mobile: 14),
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.white,
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                      ),
+                                                    )),
+                                                  ],
+                                                )
+                                              ],
+                                            ));
+                                    // Alert(
+                                    //     closeIcon: const SizedBox(),
+                                    //     padding: const EdgeInsets.only(
+                                    //         top: 0.0, left: 24, right: 24),
+                                    //     image: Image.asset('images/Icon-512.png',
+                                    //         height: 80, fit: BoxFit.fitWidth),
+                                    //     style: const AlertStyle(
+                                    //         titleTextAlign: TextAlign.center,
+                                    //         descTextAlign: TextAlign.center,
+                                    //         descStyle: TextStyle(
+                                    //             fontWeight: FontWeight.normal,
+                                    //             fontSize: 16),
+                                    //         isCloseButton: true),
+                                    //     context: context,
+                                    //     desc:
+                                    //         'Are you sure you want to update an order?',
+                                    //     alertAnimation: fadeAlertAnimation,
+                                    //     buttons: [
+                                    //       DialogButton(
+                                    //         onPressed: () => Navigator.pop(context),
+                                    //         color: Colors.black,
+                                    //         child: const Text(
+                                    //           "NO",
+                                    //           style: TextStyle(
+                                    //               color: Colors.white, fontSize: 15),
+                                    //         ),
+                                    //       ),
+                                    //       DialogButton(
+                                    //         onPressed: () {
+                                    //           Navigator.pop(context);
+                                    //           // context.loaderOverlay.show();
+                                    //           // wsworkordersubmit();
+                                    //         },
+                                    //         color: Colors.black,
+                                    //         child: const Text(
+                                    //           "YES",
+                                    //           style: TextStyle(
+                                    //               color: Colors.white, fontSize: 15),
+                                    //         ),
+                                    //       ),
+                                    //     ]).show();
+                                  } else {
+                                    Alert(
+                                        closeIcon: const SizedBox(),
+                                        padding: const EdgeInsets.only(
+                                            top: 0.0, left: 18, right: 18),
+                                        image: Image.asset(
+                                            'images/Icon-512.png',
+                                            height: 80,
+                                            fit: BoxFit.fitWidth),
+                                        style: AlertStyle(
+                                            titleTextAlign: TextAlign.center,
+                                            descTextAlign: TextAlign.center,
+                                            descStyle: TextStyle(
+                                                fontWeight: FontWeight.normal,
+                                                fontSize: context.accountFont(
+                                                    16,
+                                                    mobile: 14)),
+                                            isCloseButton: true),
+                                        context: context,
+                                        desc:
+                                            'Entered Description is Already Added',
+                                        alertAnimation: fadeAlertAnimation,
+                                        buttons: [
+                                          DialogButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            color: Colors.black,
+                                            child: Text(
+                                              "CLOSE",
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: context.accountFont(
+                                                      15,
+                                                      mobile: 14)),
                                             ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  }));
-                        },
-                        child: Container(
-                            padding: const EdgeInsets.only(top: 13),
-                            height: 50,
-                            color: Colors.black,
-                            child: const Text(
-                              'GET VENDOR QUOTE',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            )),
-                      ),
-                    ),
-                  ],
-                ))
-              : const SizedBox(),
-        ],
+                                          ),
+                                        ]).show();
+                                  }
+                                }
+                              },
+                              child: Container(
+                                  padding: const EdgeInsets.only(top: 13),
+                                  height: 50,
+                                  color: Colors.black,
+                                  child: const Text(
+                                    'OK TO ORDER',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.center,
+                                  ))))
+                      : const SizedBox(),
+                  flagBtnHideApproveReject == true
+                      ? Expanded(
+                          child: Row(
+                          children: [
+                            Expanded(
+                              child: PoActionFeedback(
+                                  child: InkWell(
+                                onTap: () {
+                                  if (
+                                      // (widget.orderDetails?.poAssingTo == "0" ||
+                                      //       widget.orderDetails?.poAssingTo == "") &&
+                                      purchaseUserTrack != '0') {
+                                    chooseAssignToModal();
+                                  }
+                                },
+                                child: _poFooterCapsule('ASSIGN TO',
+                                    enabled: purchaseUserTrack != '0'),
+                              )),
+                            ),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () {
+                                  _showPoDialog(
+                                      // barrierDismissible: false,
+                                      context: context,
+                                      builder:
+                                          (BuildContext context) =>
+                                              StatefulBuilder(
+                                                  builder: (context, setState) {
+                                                return Dialog(
+                                                  clipBehavior: Clip.antiAlias,
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16)),
+                                                  surfaceTintColor:
+                                                      Colors.transparent,
+                                                  elevation: 0,
+                                                  child: SizedBox(
+                                                    width: 432.0,
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        _poPopupHeader(
+                                                            'SELECT VENDOR'),
+                                                        Divider(
+                                                          color: Colors
+                                                              .grey.shade500,
+                                                          thickness: 1.5,
+                                                        ),
+                                                        SizedBox(
+                                                          height: 300,
+                                                          width: 360,
+                                                          child:
+                                                              ListView.builder(
+                                                                  itemCount:
+                                                                      searchData!
+                                                                          .length,
+                                                                  itemBuilder:
+                                                                      (context,
+                                                                          index) {
+                                                                    bool
+                                                                        selected =
+                                                                        false;
+                                                                    if (searchData![index]
+                                                                            .sendStatus! ==
+                                                                        '0') {
+                                                                      String
+                                                                          vendorId =
+                                                                          searchData![index]
+                                                                              .selectId!;
+                                                                      for (int i =
+                                                                              0;
+                                                                          i < searchDataSelected.length;
+                                                                          i++) {
+                                                                        if (vendorId ==
+                                                                            searchDataSelected[i]["vendor_id"].toString()) {
+                                                                          selected =
+                                                                              true;
+                                                                          break;
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                    return Column(
+                                                                      children: [
+                                                                        InkWell(
+                                                                          onTap:
+                                                                              () {
+                                                                            bool
+                                                                                flag =
+                                                                                false;
+                                                                            String
+                                                                                vendorId =
+                                                                                searchData![index].selectId!;
+                                                                            for (int i = 0;
+                                                                                i < searchDataSelected.length;
+                                                                                i++) {
+                                                                              if (vendorId == searchDataSelected[i]["vendor_id"].toString()) {
+                                                                                if (searchData![index].sendStatus! == '0') {
+                                                                                  searchDataSelected.removeAt(i);
+                                                                                  setState(() {
+                                                                                    searchData?.length;
+                                                                                  });
+                                                                                  flag = true;
+                                                                                  break;
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                            if (flag ==
+                                                                                false) {
+                                                                              if (searchData![index].sendStatus! == '0') {
+                                                                                Map<String, String> data = {
+                                                                                  "vendor_id": searchData![index].selectId!,
+                                                                                };
+                                                                                searchDataSelected.add(data);
+                                                                                setState(() {
+                                                                                  searchData?.length;
+                                                                                });
+                                                                              } else {
+                                                                                _showPoDialog<String>(
+                                                                                    context: context,
+                                                                                    builder: (BuildContext context) => AlertDialog(
+                                                                                          clipBehavior: Clip.antiAlias,
+                                                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                                                          surfaceTintColor: Colors.transparent,
+                                                                                          title: const Text(''),
+                                                                                          content: Text('Already PO Quote is being send.', style: TextStyle(fontStyle: FontStyle.normal, fontSize: context.accountFont(17.0, mobile: 14))),
+                                                                                          actions: <Widget>[
+                                                                                            PoActionFeedback(
+                                                                                                child: ElevatedButton(
+                                                                                              style: ElevatedButton.styleFrom(shape: const StadiumBorder(), backgroundColor: Colors.black, fixedSize: const Size.fromWidth(100), padding: const EdgeInsets.all(10), textStyle: const TextStyle(color: Colors.white)),
+                                                                                              child: Text('CLOSE', style: TextStyle(fontWeight: FontWeight.normal, fontSize: context.accountFont(14.0, mobile: 14), color: Colors.white)),
+                                                                                              onPressed: () {
+                                                                                                setState(() {
+                                                                                                  Navigator.pop(context);
+                                                                                                });
+                                                                                              },
+                                                                                            )),
+                                                                                          ],
+                                                                                        ));
+                                                                              }
+                                                                            }
+                                                                            //Navigator.of(
+                                                                            // context)
+                                                                            //.pop();
+                                                                          },
+                                                                          child:
+                                                                              Container(
+                                                                            margin:
+                                                                                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                                                            padding:
+                                                                                const EdgeInsets.all(12),
+                                                                            decoration:
+                                                                                _poPopupRowDecoration(selected || searchData![index].sendStatus == '1'),
+                                                                            child: _poPopupSelectionRow(searchData![index].selectName ?? '',
+                                                                                selected: selected || searchData![index].sendStatus == '1',
+                                                                                disabled: searchData![index].sendStatus == '1'),
+                                                                          ),
+                                                                        ),
+                                                                        const Divider(
+                                                                          height:
+                                                                              1,
+                                                                          thickness:
+                                                                              0.5,
+                                                                          color:
+                                                                              Colors.black,
+                                                                        ),
+                                                                      ],
+                                                                    );
+                                                                  }),
+                                                        ),
+                                                        PoActionFeedback(
+                                                            child: InkWell(
+                                                          onTap: () {
+                                                            Navigator.of(
+                                                                    context)
+                                                                .pop();
+
+                                                            _showPoDialog(
+                                                              context: context,
+                                                              // barrierDismissible: false,
+                                                              builder:
+                                                                  (BuildContext
+                                                                      context) {
+                                                                dialogContext =
+                                                                    context;
+                                                                return _quoteLoadingDialog(context);
+                                                              },
+                                                            );
+
+                                                            submitPurchaseOrderRequestion();
+                                                          },
+                                                          child: _poPopupAction(
+                                                              'REQUEST QUOTE'),
+                                                        )),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              }));
+                                },
+                                child: _poFooterCapsule('GET VENDOR QUOTE'),
+                              ),
+                            ),
+                          ],
+                        ))
+                      : const SizedBox(),
+                ],
+              ),
+            )));
+  }
+
+  Future<T?> _showPoDialog<T>({
+    required BuildContext context,
+    required WidgetBuilder builder,
+    bool barrierDismissible = true,
+  }) => showAccountDialog<T>(
+    context: context,
+    barrierDismissible: barrierDismissible,
+    builder: (dialogContext) {
+      if (dialogContext.accountCompact) return builder(dialogContext);
+      final size = MediaQuery.sizeOf(dialogContext);
+      final theme = Theme.of(dialogContext);
+      return Theme(
+        data: theme.copyWith(dialogTheme: theme.dialogTheme.copyWith(
+          constraints: BoxConstraints(
+            minWidth: (size.width - 48).clamp(0.0, 360.0),
+            maxWidth: (size.width * 0.48).clamp(360.0, 760.0),
+            maxHeight: size.height * 0.85,
+          ),
+          insetPadding: const EdgeInsets.all(24),
+        )),
+        child: Builder(builder: builder),
+      );
+    },
+  );
+
+  Widget _quoteLoadingDialog(BuildContext dialogContext) {
+    final size = MediaQuery.sizeOf(dialogContext);
+    final width = dialogContext.accountCompact
+        ? (size.width - 48).clamp(0.0, 360.0)
+        : (size.width * 0.30).clamp(320.0, 440.0);
+    return Dialog(
+      key: const ValueKey('po-quote-loading-dialog'),
+      insetPadding: const EdgeInsets.all(24),
+      constraints: BoxConstraints.tightFor(width: width),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      surfaceTintColor: Colors.transparent,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(width: 32, height: 32, child: CircularProgressIndicator()),
+          SizedBox(height: 16),
+          Text('Loading'),
+        ]),
       ),
     );
   }
 
+  Widget _poFooterCapsule(String label, {bool enabled = true}) => LayoutBuilder(
+      builder: (context, constraints) => Container(
+      key: ValueKey('po-footer-$label'),
+      height: widget.poId == 'Verified' ? 45.6 : 48,
+      alignment: Alignment.center,
+      margin: EdgeInsets.symmetric(
+          horizontal: constraints.maxWidth * 0.01, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+          color: enabled ? Colors.black : Colors.grey,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x18000000), blurRadius: 6, offset: Offset(0, 3))
+          ]),
+      child: Text(label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: context.accountFont(14, mobile: 12)))));
+
+  Widget _poPopupHeader(String title) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: const BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      child: Text(title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              fontSize: context.accountFont(17, mobile: 15),
+              fontWeight: FontWeight.w700,
+              color: Colors.white)));
+
+  Widget _poPopupAction(String label) => Container(
+      width:
+          context.accountCompact ? MediaQuery.sizeOf(context).width - 96 : 400,
+      alignment: Alignment.center,
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+          color: Colors.black, borderRadius: BorderRadius.circular(999)),
+      child: Text(label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: context.accountFont(15, mobile: 13))));
+  BoxDecoration _poPopupRowDecoration(bool selected) => BoxDecoration(
+      color: selected ? const Color(0xfff1f3f5) : Colors.white,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(
+          color: selected ? const Color(0xffced4da) : const Color(0xffe9ecef)));
+
+  Widget _poPopupSelectionRow(String label,
+          {required bool selected, bool disabled = false}) =>
+      Row(children: [
+        Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: context.accountFont(15, mobile: 13),
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: Colors.black87))),
+        const SizedBox(width: 12),
+        Icon(selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+            size: 22,
+            color: disabled
+                ? Colors.grey
+                : selected
+                    ? Colors.green
+                    : Colors.grey),
+      ]);
+
+  InputDecoration _poPopupSearchDecoration(String hint) {
+    final border = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xffdee2e6)));
+    return InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: const Color(0xfff8f9fa),
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        prefixIcon:
+            const Icon(Icons.search_rounded, size: 19, color: Colors.black54),
+        border: border,
+        enabledBorder: border,
+        focusedBorder:
+            border.copyWith(borderSide: const BorderSide(color: Colors.black)));
+  }
+
+  Widget _verifyPoSummary() {
+    final order = widget.orderDetails!;
+    String value(String? text) => text == null || text.trim().isEmpty ? '—' : text;
+    final status = const {'0': 'Pending', '1': 'Assigned', '2': 'Issued', '3': 'Dispute'}[order.poStatus] ?? '---';
+    final statusColor = order.poStatus == '2'
+        ? Color.alphaBlend(const Color(0xff00802b).withOpacity(0.22), Colors.white)
+        : ['0', '1', '3'].contains(order.poStatus)
+            ? Color.alphaBlend(const Color(0xffffd633).withOpacity(0.34), Colors.white)
+            : Colors.white;
+    Widget detail(String label, String text, {Color color = Colors.white}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(flex: 4, child: Text(label, style: TextStyle(
+            color: Colors.white, fontSize: context.accountCompact ? 11 : 14,
+            height: 1.25))),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('-', style: TextStyle(color: Colors.white70, fontSize: 12)),
+        ),
+        Expanded(flex: 6, child: Text(text, style: TextStyle(
+            color: color, fontSize: context.accountCompact ? 12 : 14,
+            height: 1.25, fontWeight: FontWeight.w700))),
+      ]),
+    );
+    return Container(
+      key: const ValueKey('verify-po-summary-card'),
+      margin: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+      padding: EdgeInsets.symmetric(horizontal: context.accountCompact ? 12 : 20, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [BoxShadow(color: Color(0x18000000), blurRadius: 8, offset: Offset(0, 3))],
+      ),
+      child: IntrinsicHeight(child: Row(
+        key: context.accountCompact ? const ValueKey('po-mobile-summary') : null,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: Column(children: [
+            detail('P.O. No.', value(order.poNo)),
+            detail('P.O. Status', status, color: statusColor),
+            detail('Slab No', value(order.slabName)),
+          ])),
+          const VerticalDivider(width: 16, thickness: 0.5, color: Colors.white24),
+          Expanded(child: Column(children: [
+            detail('Booking Type', value(order.gradeName)),
+            detail('Project Name', value(order.projectName)),
+            detail('Requested By', value(order.raisedBy)),
+          ])),
+        ],
+      )),
+    );
+  }
+
+  Widget _poSummaryRow({required List<Widget> children}) {
+    if (!context.accountCompact) {
+      return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: children);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+          key: const ValueKey('po-mobile-summary'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(child: children[i]),
+            ]
+          ]),
+    );
+  }
+
+  Widget _poFormRow(String label,
+      {required List<Widget> children,
+      CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start}) {
+    final compactLabels = widget.poId == 'Verified';
+    final stackedLabel = const {
+      'Requirement Type': 'Requirement\nType -',
+      'Description / Sub type': 'Description /\nSub type -',
+      'Requirement For': 'Requirement\nFor -',
+      'Requirement Date': 'Requirement\nDate -',
+      'Unit Price (₹)': 'Unit\nPrice (₹) -',
+      'Total Price (₹)': 'Total\nPrice (₹) -',
+      'Other Remarks': 'Other\nRemarks -',
+    }[label] ?? '$label -';
+    final Widget title = compactLabels
+        ? SizedBox(height: _poFieldHeight,
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+              child: Text(stackedLabel, maxLines: 2, style: TextStyle(
+                  fontSize: context.accountCompact ? 12 : 14,
+                  height: 1.1, fontWeight: FontWeight.w600, color: Colors.black87))))
+        : Text('$label -', style: TextStyle(
+            fontSize: context.accountFont(15, mobile: 13),
+            fontWeight: FontWeight.w600, color: Colors.black87));
+    if (!context.accountCompact) {
+      if (compactLabels) {
+        return Row(key: ValueKey('po-form-$label'),
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [SizedBox(width: 110, child: title), ...children.skip(1)]);
+      }
+      return AccountFlowRow(
+          crossAxisAlignment: crossAxisAlignment, children: children);
+    }
+    final controls = children.skip(1)
+        .where((child) => child is! SizedBox || child.child != null)
+        .map((child) => child is Flexible ? child.child : child).toList();
+    if (label == 'Description / Sub type' && widget.poId != 'Verified') {
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [title, const SizedBox(height: 8), ...controls]);
+    }
+    if (label == 'Requirement For') {
+      if (compactLabels) {
+        return Row(key: const ValueKey('po-form-Requirement For'),
+            crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(flex: 3, child: title),
+          const SizedBox(width: 8),
+          Expanded(flex: 8, child: Row(children: [
+            Expanded(child: controls.first),
+            const SizedBox(width: 6),
+            controls.last,
+          ])),
+        ]);
+      }
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [Expanded(child: title), controls.last]),
+        const SizedBox(height: 8), controls.first
+      ]);
+    }
+    return Row(key: ValueKey('po-form-$label'),
+        crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(flex: compactLabels ? 3 : 4, child: title),
+          const SizedBox(width: 8),
+          Expanded(flex: compactLabels ? 8 : 7,
+              child: Row(children: [
+                for (var i = 0; i < controls.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  Expanded(child: controls[i]),
+                ]
+              ])),
+        ]);
+  }
+
+  double get _poFieldHeight {
+    if (widget.poId != 'Verified') return context.accountCompact ? 40.5 : 45;
+    final fontSize = context.accountCompact ? 14.0 : 15.0;
+    return MediaQuery.textScalerOf(context).scale(fontSize) * 1.5 + 14;
+  }
+
   Widget _requirementType(int indexRow) {
-    return Row(
+    return _poFormRow(
+      'Requirement Type',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230.0,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230.0,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Requirement Type',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
@@ -3030,7 +3348,7 @@ class _PoDetailsState extends State<PoDetails> {
         //         border: Border.all(
         //           color: Colors.grey,
         //         ),
-        //         borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+        //         borderRadius: const BorderRadius.all(Radius.circular(8.0))),
         //     child: Padding(
         //       padding: const EdgeInsets.only(left: 8.0, right: 8.0),
         //       child: SearchChoices.single(
@@ -3088,74 +3406,51 @@ class _PoDetailsState extends State<PoDetails> {
               print('Clicked');
               editingController.text = "";
               finishingTypeList = finishingTypeListOriginal;
-              showDialog<void>(
+              _selectedReqTypeIndex = arrayList[indexRow].grade_id.toString();
+              _showPoDialog<void>(
                 context: context,
                 builder: (BuildContext context) {
                   return AlertDialog(
+                    clipBehavior: Clip.antiAlias,
+                    surfaceTintColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(8), // Set radius to zero
-                    ),
+                        borderRadius: BorderRadius.circular(16)),
+                    constraints: context.accountCompact
+                        ? BoxConstraints.tightFor(width: (MediaQuery.sizeOf(context).width - 32) * 0.9)
+                        : null,
+                    actionsAlignment: MainAxisAlignment.center,
                     titlePadding: EdgeInsets.zero,
                     actionsPadding: EdgeInsets.zero,
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 10.0, vertical: 10),
-                    title: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      decoration: const BoxDecoration(
-                          // color: Colors.black,
-                          // border:
-                          //     Border(bottom: BorderSide(color: Colors.black54)),
-                          borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      )),
-                      child: const Text(
-                        'Select Requirement Type',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+                    title: _poPopupHeader('Select Requirement Type'),
                     actions: <Widget>[
-                      InkWell(
+                      PoActionFeedback(
+                          child: InkWell(
                         onTap: () {
                           Navigator.of(context).pop();
                         },
-                        child: Container(
-                          width: 500,
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: const BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.only(
-                                bottomLeft: Radius.circular(8),
-                                bottomRight: Radius.circular(8),
-                              )),
-                          child: const Text(
-                            "OK",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                        child: _poPopupAction('OK'),
+                      )),
                     ],
                     content: StatefulBuilder(
                       builder: (BuildContext context, StateSetter setState1) {
                         return Container(
                           key: formkey,
                           padding: const EdgeInsets.symmetric(horizontal: 14),
-                          height: 450,
+                          height: widget.poId == 'Verified'
+                              ? (context.accountCompact ? 360 : 400)
+                              : (context.accountCompact ? 405 : 450),
                           width: 400,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (useAccountManagementTestData) ...[
+                                const Text('Sample requirement types · preview only',
+                                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                                const SizedBox(height: 8),
+                              ],
                               SizedBox(
                                 height: 40,
                                 child: TextField(
@@ -3181,16 +3476,13 @@ class _PoDetailsState extends State<PoDetails> {
                                       });
                                     }
                                   },
-                                  style: const TextStyle(fontSize: 13),
+                                  style: TextStyle(
+                                      fontSize:
+                                          context.accountFont(13, mobile: 13)),
                                   controller: editingController,
-                                  decoration: const InputDecoration(
-                                      contentPadding: EdgeInsets.all(12.0),
-                                      labelText: "Search Requirement Type",
-                                      hintText: "Search Requirement Type",
-                                      prefixIcon: Icon(Icons.search),
-                                      border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.all(
-                                              Radius.circular(7.0)))),
+                                  decoration: _poPopupSearchDecoration(
+                                      'Search Requirement Type').copyWith(
+                                          filled: true, fillColor: Colors.white),
                                 ),
                               ),
                               verticalSpaceTiny,
@@ -3249,77 +3541,49 @@ class _PoDetailsState extends State<PoDetails> {
                                                   fetchGradeDescription();
                                                 });
                                               },
-                                              child: Padding(
-                                                padding:
+                                              child: Container(
+                                                margin:
                                                     const EdgeInsets.symmetric(
+                                                        vertical: 4),
+                                                decoration:
+                                                    _poPopupRowDecoration(
+                                                        _selectedReqTypeIndex ==
+                                                            finishingTypeList![
+                                                                    index]
+                                                                .finishingId),
+                                                padding:
+                                                    EdgeInsets.symmetric(
                                                         horizontal: 5.0,
-                                                        vertical: 7.0),
+                                                        vertical: widget.poId == 'Verified' ? 5 : 7),
                                                 child: Column(
                                                   children: [
-                                                    Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Column(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .start,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Text(
-                                                              finishingTypeList![
-                                                                      index]
-                                                                  .finishingName!,
-                                                              style: normalText,
-                                                            ),
-                                                            Text(
-                                                              'Available Vendors(${finishingTypeList![index].count!})',
-                                                              style: const TextStyle(
-                                                                  color: Colors
-                                                                      .blue,
-                                                                  fontSize: 13),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        _selectedReqTypeIndex ==
-                                                                null
-                                                            ? const Icon(
-                                                                Icons
-                                                                    .circle_outlined,
-                                                                size: 25,
-                                                                color:
-                                                                    Colors.grey,
-                                                              )
-                                                            : _selectedReqTypeIndex ==
-                                                                    finishingTypeList![
-                                                                            index]
-                                                                        .finishingId
-                                                                ? const Icon(
-                                                                    Icons
-                                                                        .circle,
-                                                                    size: 25,
-                                                                    color: Colors
-                                                                        .green,
-                                                                  )
-                                                                : const Icon(
-                                                                    Icons
-                                                                        .circle_outlined,
-                                                                    size: 25,
-                                                                    color: Colors
-                                                                        .grey,
-                                                                  ),
-                                                      ],
-                                                    ),
+                                                    Row(children: [
+                                                      Expanded(child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(finishingTypeList![index].finishingName!,
+                                                              textAlign: TextAlign.left, style: normalText),
+                                                          Text('Available Vendors(${finishingTypeList![index].count ?? '0'})',
+                                                              style: TextStyle(color: Colors.blue,
+                                                                  fontSize: context.accountFont(13, mobile: 13))),
+                                                        ],
+                                                      )),
+                                                      const SizedBox(width: 8),
+                                                      Icon(
+                                                        _selectedReqTypeIndex == finishingTypeList![index].finishingId
+                                                            ? Icons.check_circle_outline_outlined
+                                                            : Icons.circle_outlined,
+                                                        size: 25,
+                                                        color: _selectedReqTypeIndex == finishingTypeList![index].finishingId
+                                                            ? Colors.green : Colors.grey,
+                                                      ),
+                                                    ]),
+                                                    if (widget.poId != 'Verified') ...[
                                                     verticalSpaceSmall,
                                                     const Divider(
                                                         height: 1.0,
                                                         color: Colors.black),
+                                                    ],
                                                   ],
                                                 ),
                                               ),
@@ -3331,11 +3595,20 @@ class _PoDetailsState extends State<PoDetails> {
                                               Navigator.of(context).pop();
                                               _txtCustomRequirementType.text =
                                                   "";
-                                              showDialog<void>(
+                                              _showPoDialog<void>(
                                                   context: context,
                                                   builder:
                                                       (BuildContext context) {
                                                     return AlertDialog(
+                                                        clipBehavior:
+                                                            Clip.antiAlias,
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        16)),
+                                                        surfaceTintColor:
+                                                            Colors.transparent,
                                                         contentPadding:
                                                             const EdgeInsets
                                                                 .all(0.0),
@@ -3380,7 +3653,7 @@ class _PoDetailsState extends State<PoDetails> {
                                                                             color:
                                                                                 Colors.grey,
                                                                           ),
-                                                                          borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                                                                          borderRadius: const BorderRadius.all(Radius.circular(8.0))),
                                                                       child:
                                                                           Padding(
                                                                         padding: const EdgeInsets
@@ -3397,11 +3670,11 @@ class _PoDetailsState extends State<PoDetails> {
                                                                               false,
                                                                           enabled:
                                                                               true,
-                                                                          style: const TextStyle(
+                                                                          style: TextStyle(
                                                                               color: Colors.black,
-                                                                              fontSize: 15.0),
+                                                                              fontSize: context.accountFont(15.0, mobile: 12.6)),
                                                                           decoration:
-                                                                              const InputDecoration(
+                                                                              InputDecoration(
                                                                             border:
                                                                                 InputBorder.none,
                                                                             hintText:
@@ -3425,12 +3698,12 @@ class _PoDetailsState extends State<PoDetails> {
                                                                       height:
                                                                           40,
                                                                       child:
-                                                                          Row(
+                                                                          AccountFlowRow(
                                                                         mainAxisAlignment:
                                                                             MainAxisAlignment.spaceAround,
                                                                         children: [
                                                                           Expanded(
-                                                                            child: SimpleButton(
+                                                                            child: AccountActionButton(
                                                                                 lblText: "CLOSE",
                                                                                 color: Colors.black,
                                                                                 onTap: () {
@@ -3439,15 +3712,18 @@ class _PoDetailsState extends State<PoDetails> {
                                                                           ),
                                                                           horizontalSpaceSmall,
                                                                           Expanded(
-                                                                            child: SimpleButton(
+                                                                            child: AccountActionButton(
                                                                                 lblText: "SUBMIT",
                                                                                 color: Colors.black,
                                                                                 onTap: () {
                                                                                   if (_txtCustomRequirementType.text.isEmpty) {
-                                                                                    showDialog<void>(
+                                                                                    _showPoDialog<void>(
                                                                                         context: context,
                                                                                         builder: (BuildContext context) {
                                                                                           return AlertDialog(
+                                                                                              clipBehavior: Clip.antiAlias,
+                                                                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                                                              surfaceTintColor: Colors.transparent,
                                                                                               contentPadding: const EdgeInsets.all(0.0),
                                                                                               content: SizedBox(
                                                                                                   width: 400,
@@ -3465,7 +3741,7 @@ class _PoDetailsState extends State<PoDetails> {
                                                                                                         padding: const EdgeInsets.symmetric(horizontal: 70.0),
                                                                                                         child: SizedBox(
                                                                                                           height: 40,
-                                                                                                          child: SimpleButton(
+                                                                                                          child: AccountActionButton(
                                                                                                               lblText: "CLOSE",
                                                                                                               color: Colors.black,
                                                                                                               onTap: () {
@@ -3485,10 +3761,13 @@ class _PoDetailsState extends State<PoDetails> {
                                                                                       }
                                                                                     }
                                                                                     if (flag == true) {
-                                                                                      showDialog<void>(
+                                                                                      _showPoDialog<void>(
                                                                                           context: context,
                                                                                           builder: (BuildContext context) {
                                                                                             return AlertDialog(
+                                                                                                clipBehavior: Clip.antiAlias,
+                                                                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                                                                surfaceTintColor: Colors.transparent,
                                                                                                 contentPadding: const EdgeInsets.all(0.0),
                                                                                                 content: SizedBox(
                                                                                                     width: 400,
@@ -3511,7 +3790,7 @@ class _PoDetailsState extends State<PoDetails> {
                                                                                                           padding: const EdgeInsets.symmetric(horizontal: 70.0),
                                                                                                           child: SizedBox(
                                                                                                             height: 40,
-                                                                                                            child: SimpleButton(
+                                                                                                            child: AccountActionButton(
                                                                                                                 lblText: "CLOSE",
                                                                                                                 color: Colors.black,
                                                                                                                 onTap: () {
@@ -3548,14 +3827,16 @@ class _PoDetailsState extends State<PoDetails> {
                                               decoration: BoxDecoration(
                                                 border: Border.all(),
                                                 color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.all(
+                                                    Radius.circular(999)),
                                               ),
-                                              child: const Text(
+                                              child: Text(
                                                 'ADD CUSTOM TYPE',
                                                 style: TextStyle(
                                                   color: Colors.black,
-                                                  fontSize: 17.0,
+                                                  fontSize: context.accountFont(
+                                                      17.0,
+                                                      mobile: 14),
                                                 ),
                                               ),
                                             ),
@@ -3572,13 +3853,13 @@ class _PoDetailsState extends State<PoDetails> {
             },
             child: Stack(alignment: Alignment.center, children: [
               Container(
-                height: 45.0,
+                height: _poFieldHeight,
                 decoration: BoxDecoration(
                     color: kcTextFieldColor,
                     border: Border.all(
                       color: Colors.grey,
                     ),
-                    borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                    borderRadius: const BorderRadius.all(Radius.circular(8.0))),
                 child: Padding(
                   padding: const EdgeInsets.only(left: 10.0, right: 10.0),
                   child: TextField(
@@ -3587,18 +3868,24 @@ class _PoDetailsState extends State<PoDetails> {
                         arrayList[indexRow].editingControllerGradeTypeName,
                     autofocus: false,
                     enabled: false,
-                    style: const TextStyle(color: Colors.black, fontSize: 15.0),
-                    decoration: const InputDecoration(
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontSize: context.accountFont(15.0, mobile: 12.6)),
+                    decoration: InputDecoration(
+                      contentPadding:
+                          EdgeInsets.only(top: 12, bottom: 12, right: 28),
                       border: InputBorder.none,
                       hintText: 'Select Requirement Type',
                     ),
                   ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                   right: 10,
                   child: Center(
-                      child: Icon(Icons.arrow_drop_down_circle_outlined))),
+                      child: Icon(Icons.arrow_drop_down,
+                          key: const ValueKey('po-requirement-type-dropdown-icon'),
+                          size: context.accountCompact ? 18 : 24))),
             ]),
           ),
         ),
@@ -3610,33 +3897,37 @@ class _PoDetailsState extends State<PoDetails> {
     // _typeAheadController.add(TextEditingController());
     // _typeAheadController[index].text = arrayList[index].description.toString();
 
-    arrayList[index].editingControllerDescription?.text =
-        arrayList[index].description.toString();
-    return Row(
+    final controller = arrayList[index].editingControllerDescription ??=
+        TextEditingController(text: arrayList[index].description.toString());
+    if (controller.text != arrayList[index].description.toString()) {
+      controller.text = arrayList[index].description.toString();
+    }
+    return _poFormRow(
+      'Description / Sub type',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230.0,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230.0,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Description / Sub type',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45.0,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(left: 10.0, right: 10),
               child: TypeAheadField<String>(
@@ -3645,13 +3936,12 @@ class _PoDetailsState extends State<PoDetails> {
                   onChanged: (value) {
                     arrayList[index].description = value;
                   },
-                  enabled: flagBtnHideApproveReject == false ? true : false,
-                  controller: TextEditingController.fromValue(TextEditingValue(
-                      text: arrayList[index].description.toString(),
-                      selection: TextSelection.collapsed(
-                          offset: arrayList[index].description.length))),
+                  enabled: !flagBtnHideApproveReject ||
+                      widget.poId == 'Verified',
+                  controller: controller,
+                  style: TextStyle(fontSize: context.accountFont(15, mobile: 12.6)),
                   decoration:
-                      const InputDecoration(hintText: 'Enter Description'),
+                      InputDecoration(hintText: 'Enter Description'),
                 ),
                 suggestionsCallback: (pattern) {
                   return Future.delayed(
@@ -3660,9 +3950,10 @@ class _PoDetailsState extends State<PoDetails> {
                   );
                 },
                 itemBuilder: (context, String suggestion) {
-                  return ListTile(
+                  return AccountCard(
+                      child: ListTile(
                     title: Text(suggestion),
-                  );
+                  ));
                 },
                 onSuggestionSelected: (String suggestion) {
                   setState(() {
@@ -3690,49 +3981,67 @@ class _PoDetailsState extends State<PoDetails> {
     // _txtControllerRequirementFor.add(TextEditingController());
     // _txtControllerRequirementFor[index].text =
     //     arrayList[index].casting_for.toString();
-    arrayList[index].editingControllerCastingFor?.text =
-        arrayList[index].casting_for.toString();
-    return Row(
+    final controller = arrayList[index].editingControllerCastingFor ??=
+        TextEditingController(text: arrayList[index].casting_for.toString());
+    if (controller.text != arrayList[index].casting_for.toString()) {
+      controller.text = arrayList[index].casting_for.toString();
+    }
+    return _poFormRow(
+      'Requirement For',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230.0,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230.0,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Requirement For',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45.0,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(left: 10.0, right: 10.0),
-              child: TextField(
-                enabled: flagBtnHideApproveReject == false ? true : false,
-                controller: TextEditingController.fromValue(TextEditingValue(
-                    text: arrayList[index].casting_for.toString(),
-                    selection: TextSelection.collapsed(
-                        offset: arrayList[index].casting_for.length))),
-                style: const TextStyle(color: Colors.black, fontSize: 15.0),
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 18.0),
-                  border: InputBorder.none,
-                  hintText: 'Enter requirement for',
+              child: TypeAheadField<String>(
+                getImmediateSuggestions: true,
+                textFieldConfiguration: TextFieldConfiguration(
+                  enabled: !flagBtnHideApproveReject ||
+                      widget.poId == 'Verified',
+                  controller: controller,
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: context.accountFont(15, mobile: 12.6)),
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(
+                        vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 10.8 : 12)),
+                    border: InputBorder.none,
+                    hintText: 'Enter requirement for',
+                  ),
+                  onChanged: (value) => arrayList[index].casting_for = value,
                 ),
-                onChanged: (String str) {
-                  arrayList[index].casting_for = str;
+                suggestionsCallback: (pattern) => (slabDetailsOriginal ?? [])
+                    .map((slab) => slab.slab_name ?? '')
+                    .where((name) => name.isNotEmpty &&
+                        name.toLowerCase().contains(pattern.toLowerCase()))
+                    .toSet()
+                    .toList(),
+                itemBuilder: (context, suggestion) => ListTile(
+                    title: Text(suggestion)),
+                onSuggestionSelected: (suggestion) {
+                  controller.text = suggestion;
+                  arrayList[index].casting_for = suggestion;
                 },
               ),
             ),
@@ -3740,15 +4049,30 @@ class _PoDetailsState extends State<PoDetails> {
         ),
         horizontalSpaceSmall,
         SizedBox(
-          width: 120,
-          height: 45,
+          width: widget.poId == 'Verified'
+              ? (context.accountCompact ? 74 : 103)
+              : (context.accountCompact ? 86.4 : 120),
+          height: widget.poId == 'Verified'
+              ? (context.accountCompact ? 28 : 38.5)
+              : (context.accountCompact ? 32.4 : 45),
           child: InkWell(
             onTap: () {
-              showDialog<void>(
+              _txtSearchSlab.clear();
+              slabDetails = slabDetailsOriginal;
+              _showPoDialog<void>(
                 context: context,
                 barrierDismissible: false,
                 builder: (BuildContext context) {
                   return AlertDialog(
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    surfaceTintColor: Colors.transparent,
+                    constraints: context.accountCompact
+                        ? BoxConstraints.tightFor(width: (MediaQuery.sizeOf(context).width - 48) * 0.9)
+                        : null,
+                    titlePadding: EdgeInsets.zero,
+                    title: _poPopupHeader('SELECT SLAB'),
                     contentPadding: const EdgeInsets.all(0.0),
                     content: StatefulBuilder(
                       builder: (BuildContext context, StateSetter setState) {
@@ -3756,22 +4080,19 @@ class _PoDetailsState extends State<PoDetails> {
                           padding: const EdgeInsets.all(8.0),
                           child: Container(
                             key: formkeySlab,
-                            height: MediaQuery.of(context).size.height / 1.5,
-                            width: MediaQuery.of(context).size.width / 1.5,
+                            height: (MediaQuery.sizeOf(context).height * 0.65)
+                                .clamp(220.0, 520.0) * (context.accountCompact ? 0.9 : 1) - 48,
+                            width: context.accountCompact
+                                ? MediaQuery.sizeOf(context).width - 64
+                                : 480,
                             color: Colors.white,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.start,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Center(
-                                    child: Text(
-                                      "SELECT SLAB",
-                                      style: boldText,
-                                    ),
-                                  ),
-                                ),
+                                if (useAccountManagementTestData)
+                                  const Text('Sample slabs · preview only',
+                                      style: TextStyle(fontSize: 12, color: Colors.black54)),
                                 verticalSpaceTiny,
                                 SizedBox(
                                   height: 45,
@@ -3797,16 +4118,13 @@ class _PoDetailsState extends State<PoDetails> {
                                         });
                                       }
                                     },
-                                    style: const TextStyle(fontSize: 13),
+                                    style: TextStyle(
+                                        fontSize: context.accountFont(13,
+                                            mobile: 13)),
                                     controller: _txtSearchSlab,
-                                    decoration: const InputDecoration(
-                                        contentPadding: EdgeInsets.all(15.0),
-                                        labelText: "Search Slab",
-                                        hintText: "Search Slab",
-                                        prefixIcon: Icon(Icons.search),
-                                        border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(7.0)))),
+                                    decoration:
+                                        _poPopupSearchDecoration('Search Slab').copyWith(
+                                            filled: true, fillColor: Colors.white),
                                   ),
                                 ),
                                 verticalSpaceTiny,
@@ -3815,7 +4133,8 @@ class _PoDetailsState extends State<PoDetails> {
                                       padding: EdgeInsets.zero,
                                       itemCount: slabDetails!.length,
                                       itemBuilder: (context, int indexFor) {
-                                        return InkWell(
+                                        return PoActionFeedback(
+                                            child: InkWell(
                                           onTap: () {
                                             print('Selected');
                                             var castingFor = "";
@@ -3852,7 +4171,13 @@ class _PoDetailsState extends State<PoDetails> {
                                             updateRequirementFor(
                                                 castingFor, index);
                                           },
-                                          child: Padding(
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                                vertical: 4),
+                                            decoration: _poPopupRowDecoration(
+                                                slabDetails![indexFor]
+                                                        .selected ==
+                                                    '1'),
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 10.0,
                                                 vertical: 13.0),
@@ -3865,11 +4190,12 @@ class _PoDetailsState extends State<PoDetails> {
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.center,
                                                   children: [
-                                                    Text(
-                                                      slabDetails![indexFor]
-                                                          .slab_name!,
+                                                    Expanded(child: Text(
+                                                      slabDetails![indexFor].slab_name!,
+                                                      textAlign: TextAlign.left,
                                                       style: normalText,
-                                                    ),
+                                                    )),
+                                                    const SizedBox(width: 8),
                                                     slabDetails![indexFor]
                                                                 .selected ==
                                                             '1'
@@ -3894,13 +4220,13 @@ class _PoDetailsState extends State<PoDetails> {
                                               ],
                                             ),
                                           ),
-                                        );
+                                        ));
                                       }),
                                 ),
                                 verticalSpaceTiny,
                                 Align(
                                   alignment: Alignment.bottomCenter,
-                                  child: SimpleButton(
+                                  child: AccountActionButton(
                                     lblText: 'OK',
                                     color: kcPrimaryColor,
                                     onTap: () {
@@ -3920,23 +4246,27 @@ class _PoDetailsState extends State<PoDetails> {
             },
             child: Container(
               width: double.infinity,
-              height: 45,
+              height: widget.poId == 'Verified'
+              ? (context.accountCompact ? 28 : 38.5)
+              : (context.accountCompact ? 32.4 : 45),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(5),
+                borderRadius: BorderRadius.all(Radius.circular(999)),
                 border: Border.all(
                   color: Colors.black,
                   width: 0.8,
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'SELECT SLAB',
                 style: TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.w500,
                   fontStyle: FontStyle.normal,
-                  fontSize: 11.0,
+                  fontSize: widget.poId == 'Verified'
+                      ? context.accountFont(10, mobile: 10)
+                      : context.accountFont(11, mobile: 11),
                 ),
               ),
             ),
@@ -3960,35 +4290,40 @@ class _PoDetailsState extends State<PoDetails> {
   }
 
   Widget _selectedReqDate(int index) {
-    return Row(
+    return _poFormRow(
+      'Requirement Date',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230.0,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230.0,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Requirement Date',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45.0,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(left: 10.0, right: 10.0),
               child: InkWell(
-                onTap: flagBtnHideApproveReject == false
+                hoverColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                onTap: (!flagBtnHideApproveReject ||
+                        widget.poId == 'Verified')
                     ? () async {
                         DateTime? newDateTime = await showDatePicker(
                           context: context,
@@ -4019,13 +4354,20 @@ class _PoDetailsState extends State<PoDetails> {
                     : () async {},
                 child: TextField(
                   enabled: false,
-                  style: const TextStyle(color: Colors.black, fontSize: 15.0),
+                  controller:
+                      TextEditingController(text: selectedRequirementDate),
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: context.accountFont(15.0, mobile: 12.6)),
                   decoration: InputDecoration(
-                      labelText: selectedRequirementDate,
-                      labelStyle:
-                          const TextStyle(color: Colors.black, fontSize: 15.0),
+                      suffixIcon:
+                          const Icon(Icons.calendar_month_outlined, size: 19),
+                      suffixIconConstraints: const BoxConstraints(minWidth: 24),
+                      labelStyle: TextStyle(
+                          color: Colors.black,
+                          fontSize: context.accountFont(15.0, mobile: 12.6)),
                       contentPadding:
-                          const EdgeInsets.symmetric(vertical: 18.0),
+                          EdgeInsets.symmetric(vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 10.8 : 12)),
                       border: InputBorder.none,
                       hintText: 'Select Requirement Date'),
                   onChanged: (text) {
@@ -4049,49 +4391,54 @@ class _PoDetailsState extends State<PoDetails> {
     // _txtControllerQuantity.add(TextEditingController());
     // _txtControllerQuantity[index].text = arrayList[index].quantity.toString();
 
-    arrayList[index].editingControllerQuantity?.text =
-        arrayList[index].quantity.toString();
-    return Row(
+    final controller = arrayList[index].editingControllerQuantity ??=
+        TextEditingController(text: arrayList[index].quantity.toString());
+    if (controller.text != arrayList[index].quantity.toString()) {
+      controller.text = arrayList[index].quantity.toString();
+    }
+    final canEdit = !flagBtnHideApproveReject ||
+        widget.poId == 'Verified';
+    return _poFormRow(
+      'Quantity',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Quantity',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(
                   left: 10.0, right: 10.0, top: 0, bottom: 0),
               child: TextField(
-                enabled: flagBtnHideApproveReject == false ? true : false,
-                controller: TextEditingController.fromValue(TextEditingValue(
-                    text: arrayList[index].quantity.toString(),
-                    selection: TextSelection.collapsed(
-                        offset: arrayList[index].quantity.length))),
-                style: const TextStyle(color: Colors.black, fontSize: 15),
+                enabled: canEdit,
+                controller: controller,
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: context.accountFont(15, mobile: 14)),
                 keyboardType: TextInputType.number,
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
-                decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: 18.0),
+                decoration: InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(vertical: widget.poId == 'Verified' ? 6 : 12),
                     border: InputBorder.none,
                     hintText: 'Enter Quantity'),
                 onChanged: (String str) {
@@ -4117,21 +4464,27 @@ class _PoDetailsState extends State<PoDetails> {
         horizontalSpaceMedium,
         Expanded(
           child: Container(
+            height: widget.poId == 'Verified' ? _poFieldHeight : null,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(left: 8.0, right: 8.0),
-              child: SearchChoices.single(
-                style: const TextStyle(fontSize: 15.0, color: Colors.black),
+              child: useAccountManagementTestData
+                  ? _previewUnitField(index, canEdit)
+                  : SearchChoices.single(
+                iconSize: context.accountCompact ? 18 : 24,
+                style: TextStyle(
+                    fontSize: context.accountFont(15.0, mobile: 12.6),
+                    color: Colors.black),
                 items: unitItems,
                 value: arrayList[index].casting_unit_name.toString(),
                 hint: "Select Unit Type",
                 searchHint: "Select Unit Type",
-                readOnly: flagBtnHideApproveReject == false ? false : true,
+                readOnly: !canEdit,
                 onTap: () {
                   if (kDebugMode) {
                     print('OnTapped');
@@ -4180,22 +4533,236 @@ class _PoDetailsState extends State<PoDetails> {
     );
   }
 
+  // Demonstration units are local to this screen and never persisted.
+  final List<String> _previewUnitNames = ['MT', 'Kg', 'Nos', 'Bags', 'Cu.m', 'Sq.m'];
+
+  Widget _previewUnitField(int index, bool canEdit) => InkWell(
+        onTap: canEdit ? () => _showPreviewUnits(index) : null,
+        child: SizedBox(
+          height: _poFieldHeight,
+          child: Row(children: [
+            Expanded(child: Text(
+                arrayList[index].casting_unit_name.toString().isEmpty
+                    ? 'Select Unit Type'
+                    : arrayList[index].casting_unit_name.toString(),
+                style: TextStyle(fontSize: context.accountCompact ? 12.6 : 15),
+                overflow: TextOverflow.ellipsis)),
+            Icon(Icons.arrow_drop_down, size: context.accountCompact ? 18 : 24),
+          ]),
+        ),
+      );
+
+  Future<void> _showPreviewUnits(int index) async {
+    var query = '';
+    await _showPoDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, updateDialog) {
+          final names = {
+            if (arrayList[index].casting_unit_name.toString().isNotEmpty)
+              arrayList[index].casting_unit_name.toString(),
+            ..._previewUnitNames,
+          }.where((name) => name.toLowerCase().contains(query.toLowerCase())).toList();
+          return AlertDialog(
+            clipBehavior: Clip.antiAlias,
+            constraints: BoxConstraints.tightFor(
+                width: context.accountCompact
+                    ? (MediaQuery.sizeOf(dialogContext).width - 32).clamp(0.0, 368.0) * 0.8
+                    : (MediaQuery.sizeOf(dialogContext).width * 0.32).clamp(360.0, 520.0)),
+            titlePadding: EdgeInsets.zero,
+            contentPadding: const EdgeInsets.all(12),
+            actionsPadding: const EdgeInsets.fromLTRB(10, 6, 10, 12),
+            title: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              color: Colors.black,
+              child: const Text('Select Unit Type',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 15,
+                      fontWeight: FontWeight.w600)),
+            ),
+            content: SizedBox(
+              width: 256,
+              height: (MediaQuery.sizeOf(dialogContext).height * 0.45)
+                  .clamp(180.0, 360.0) * 0.8,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Sample units · preview only',
+                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: _poPopupSearchDecoration('Search units').copyWith(
+                      fillColor: Colors.white),
+                  onChanged: (value) => updateDialog(() => query = value),
+                ),
+                Expanded(child: Material(
+                  color: Colors.white,
+                  child: ListView(children: [
+                  for (final name in names)
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      decoration: _poPopupRowDecoration(arrayList[index].casting_unit_name == name),
+                      child: Material(type: MaterialType.transparency, child: ListTile(
+                      dense: true,
+                      minVerticalPadding: 5,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 5),
+                      title: Text(name, textAlign: TextAlign.left, style: normalText),
+                      trailing: Icon(
+                          arrayList[index].casting_unit_name == name
+                              ? Icons.check_circle_outline_outlined : Icons.circle_outlined,
+                          size: 25,
+                          color: arrayList[index].casting_unit_name == name ? Colors.green : Colors.grey),
+                      onTap: () {
+                        setState(() {
+                          if (arrayList[index].casting_unit_name != name) {
+                            arrayList[index].casting_unit_name = name;
+                            arrayList[index].casting_unit =
+                                'preview-unit-${_previewUnitNames.indexOf(name)}';
+                          }
+                        });
+                        Navigator.pop(dialogContext);
+                      },
+                    ))),
+                  ListTile(
+                    dense: true,
+                    minVerticalPadding: 5,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 5),
+                    title: const Text('Clear unit'),
+                    onTap: () {
+                      setState(() {
+                        arrayList[index].casting_unit_name = '';
+                        arrayList[index].casting_unit = '';
+                      });
+                      Navigator.pop(dialogContext);
+                    },
+                  ),
+                ]))),
+              ]),
+            ),
+            actions: [
+              Row(children: [
+                Expanded(child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      shape: const StadiumBorder()),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('CLOSE', style: TextStyle(fontSize: 12)))),
+                Expanded(child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      shape: const StadiumBorder()),
+                  onPressed: () async {
+                    final name = await _addPreviewUnit();
+                    if (name == null || !mounted || !dialogContext.mounted) return;
+                    updateDialog(() {
+                      if (!_previewUnitNames.any((unit) =>
+                          unit.toLowerCase() == name.toLowerCase())) {
+                        _previewUnitNames.add(name);
+                      }
+                    });
+                  },
+                  child: const FittedBox(fit: BoxFit.scaleDown,
+                      child: Text('ADD CUSTOM UNIT', style: TextStyle(fontSize: 12))))),
+              ]),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<String?> _addPreviewUnit() async {
+    var unitName = '';
+    final formKey = GlobalKey<FormState>();
+    final result = await _showPoDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        clipBehavior: Clip.antiAlias,
+        constraints: BoxConstraints.tightFor(
+            width: context.accountCompact
+                ? (MediaQuery.sizeOf(dialogContext).width - 32).clamp(0.0, 368.0) * 0.8
+                : (MediaQuery.sizeOf(dialogContext).width * 0.32).clamp(360.0, 520.0)),
+        titlePadding: EdgeInsets.zero,
+        contentPadding: const EdgeInsets.all(12),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        title: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          color: Colors.black,
+          child: const Text('Add Custom Unit',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white, fontSize: 15,
+                  fontWeight: FontWeight.w600)),
+        ),
+        content: Form(key: formKey, child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Preview only · saved locally for this screen',
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const SizedBox(height: 12),
+            TextFormField(
+              onChanged: (value) => unitName = value,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Enter custom unit',
+                filled: true,
+                fillColor: const Color(0xfff1f3f5),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Enter a unit name' : null,
+            ),
+          ],
+        )),
+        actions: [
+          Row(children: [
+          Expanded(child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  shape: const StadiumBorder()),
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCEL', style: TextStyle(fontSize: 12)))),
+          const SizedBox(width: 8),
+          Expanded(child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  shape: const StadiumBorder()),
+              onPressed: () {
+            if (formKey.currentState!.validate()) {
+              Navigator.pop(dialogContext, unitName.trim());
+            }
+          }, child: const Text('ADD', style: TextStyle(fontSize: 12)))),
+          ]),
+        ],
+      ),
+    );
+    return result;
+  }
+
   Widget _selecteBrand(int index) {
     // arrayList[index].editingControllerBrandName?.text =
     //     arrayList[index].brandType;
     // arrayList[index].editingControllerDescription?.text =
-    return Row(
+    return _poFormRow(
+      'Brand',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230.0,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230.0,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Brand',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
@@ -4203,18 +4770,20 @@ class _PoDetailsState extends State<PoDetails> {
         Expanded(
           child: Container(
             color: kcTextFieldColor,
-            // height: 45.0,
+            // height: _poFieldHeight,
             // decoration: BoxDecoration(
             //     color: kcTextFieldColor,
             //     border: Border.all(color: Colors.grey),
-            //     borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+            //     borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: TextFormField(
               onChanged: (value) {
                 arrayList[index].brand_supplier_name = value;
               },
               controller: arrayList[index].editingControllerBrandName,
               // enabled: false,
-              style: const TextStyle(color: Colors.black, fontSize: 15.0),
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: context.accountFont(15.0, mobile: 12.6)),
               decoration: InputDecoration(
                   disabledBorder: OutlineInputBorder(
                     borderSide: const BorderSide(color: Color(0xFF5F5C5C)),
@@ -4244,11 +4813,12 @@ class _PoDetailsState extends State<PoDetails> {
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  contentPadding: const EdgeInsets.all(10),
+                  contentPadding: EdgeInsets.symmetric(horizontal: context.accountCompact ? 9 : 10,
+                      vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 9 : 10)),
                   // border: InputBorder.none,
-                  hintStyle: const TextStyle(
+                  hintStyle: TextStyle(
                     color: Color.fromARGB(255, 116, 116, 116),
-                    fontSize: 15.0,
+                    fontSize: context.accountFont(15.0, mobile: 12.6),
                     fontWeight: FontWeight.w600,
                     fontFamily: 'HelveticaNeue',
                   ),
@@ -4264,49 +4834,52 @@ class _PoDetailsState extends State<PoDetails> {
     // _txtControllerUnitPrice.add(TextEditingController());
     // _txtControllerUnitPrice[index].text =
     //     arrayList[index].unit_price.toString();
-    arrayList[index].editingControllerUnitPrice?.text =
-        arrayList[index].unit_price.toString();
-    return Row(
+    final controller = arrayList[index].editingControllerUnitPrice ??=
+        TextEditingController(text: arrayList[index].unit_price.toString());
+    if (controller.text != arrayList[index].unit_price.toString()) {
+      controller.text = arrayList[index].unit_price.toString();
+    }
+    return _poFormRow(
+      'Unit Price (₹)',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Unit Price',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: Padding(
               padding: const EdgeInsets.only(
                   left: 10.0, right: 10.0, top: 0, bottom: 0),
               child: TextField(
-                enabled: flagBtnHideApproveReject == false ? true : false,
-                controller: TextEditingController.fromValue(TextEditingValue(
-                    text: arrayList[index].unit_price.toString(),
-                    selection: TextSelection.collapsed(
-                        offset: arrayList[index].unit_price.length))),
-                style: const TextStyle(color: Colors.black, fontSize: 15),
+                enabled: !flagBtnHideApproveReject || widget.poId == 'Verified',
+                controller: controller,
+                style: TextStyle(
+                    color: Colors.black,
+                    fontSize: context.accountFont(15, mobile: 14)),
                 keyboardType: TextInputType.number,
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
-                decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: 18.0),
+                decoration: InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(vertical: widget.poId == 'Verified' ? 6 : 12),
                     border: InputBorder.none,
                     hintText: 'Enter Unit Price (Optional)'),
                 onChanged: (String str) {
@@ -4339,44 +4912,46 @@ class _PoDetailsState extends State<PoDetails> {
     //     arrayList[index].total_amount.toString();
     arrayList[index].editingControllerTotalAmount?.text =
         arrayList[index].total_amount.toString();
-    return Row(
+    return _poFormRow(
+      'Total Price (₹)',
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 230,
-          height: 40.0,
+        SizedBox(
+          width: context.accountCompact ? 100 : 230,
+          height: widget.poId == 'Verified' ? _poFieldHeight : 40,
           child: Padding(
-            padding: EdgeInsets.only(top: 15.0),
+            padding: EdgeInsets.only(top: widget.poId == 'Verified' ? 6 : 15),
             child: Text('Total Price',
                 style: TextStyle(
                     backgroundColor: Colors.white,
-                    fontSize: 15,
+                    fontSize: context.accountFont(15, mobile: 14),
                     color: Colors.black)),
           ),
         ),
         horizontalSpaceSmall,
         Expanded(
           child: Container(
-            height: 45,
+            height: _poFieldHeight,
             decoration: BoxDecoration(
                 color: kcTextFieldColor,
                 border: Border.all(
                   color: Colors.grey,
                 ),
-                borderRadius: const BorderRadius.all(Radius.circular(5.0))),
+                borderRadius: const BorderRadius.all(Radius.circular(8.0))),
             child: TextField(
               controller: TextEditingController.fromValue(TextEditingValue(
                   text: arrayList[index].total_amount.toString(),
                   selection: TextSelection.collapsed(
                       offset: arrayList[index].total_amount.length))),
               readOnly: true,
-              style: const TextStyle(color: Colors.black, fontSize: 15),
-              decoration: const InputDecoration(
+              style: TextStyle(
+                  color: Colors.black,
+                  fontSize: context.accountFont(15, mobile: 12.6)),
+              decoration: InputDecoration(
                   contentPadding:
-                      EdgeInsets.symmetric(vertical: 15.0, horizontal: 15.0),
+                      EdgeInsets.symmetric(vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 13.5 : 15), horizontal: 15),
                   border: InputBorder.none,
-                  filled: true,
-                  fillColor: kcTextFieldGreyColor,
+                  filled: false,
                   hintText: 'Total Price'),
               onChanged: (String str) {
                 arrayList[index].total_amount = str;

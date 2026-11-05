@@ -1,8 +1,11 @@
+import 'po_action_feedback.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_loading.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_network.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stallion/models/get_po_new.dart';
 import 'package:stallion/models/notification_args.dart';
@@ -15,7 +18,6 @@ import 'package:stallion/ui/views/accountmanagement/worequested.dart';
 import '../../../models/get_project_account_management.dart';
 import '../../../utils/api_network_call.dart';
 import '../../../utils/app_url.dart';
-import '../../../utils/responsive.dart';
 import '../../shared/ui_helpers.dart';
 import 'account_management_preview.dart';
 
@@ -226,8 +228,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isMobile = context.isMobile;
-    return Scaffold(
+    final bool isMobile = context.accountCompact;
+    return AccountManagementSurface(
+        child: Scaffold(
       backgroundColor: const Color(0xfff8f9fa),
       appBar: AppBar(
         centerTitle: true,
@@ -238,8 +241,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
             widget.towarName == ""
                 ? '${widget.projectName!.toUpperCase()} - ${widget.towarName!.toUpperCase()}'
                 : widget.projectName!.toUpperCase(),
-            style:
-                const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: context.accountFont(17, mobile: 14))),
         leading: widget.navigationFlag! == 'SideMenu'
             ? const SizedBox()
             : IconButton(
@@ -269,14 +273,14 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                 padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 18),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.white, width: 1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     "Overview",
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: context.accountFont(13, mobile: 13),
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -302,14 +306,14 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                 padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 18),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.white, width: 1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.all(Radius.circular(999)),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
                     "Track",
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 13,
+                        fontSize: context.accountFont(13, mobile: 13),
                         fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -542,12 +546,13 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(
+                      SizedBox(
                           height: 40,
                           child: Center(
                               child: Text('ACCOUNT MANAGEMENT',
                                   style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize:
+                                          context.accountFont(14, mobile: 14),
                                       letterSpacing: 0.5,
                                       fontWeight: FontWeight.w700),
                                   textAlign: TextAlign.center))),
@@ -560,10 +565,12 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(strTowarName?.toUpperCase() ?? '',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                               fontStyle: FontStyle.normal,
                                               fontWeight: FontWeight.w600,
-                                              fontSize: 13.0)),
+                                              fontSize: context.accountFont(
+                                                  13.0,
+                                                  mobile: 13))),
                                       horizontalSpaceSmall,
                                       IconButton(
                                         icon: const Icon(Icons.arrow_drop_down,
@@ -603,25 +610,13 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                   ),
                 );
               })
-            : Center(
-                child: SizedBox(
-                  height: 64,
-                  child: OverflowBox(
-                    minHeight: 100,
-                    maxHeight: 100,
-                    child: Lottie.asset(
-                      'assets/animation/running2.json',
-                      repeat: true,
-                    ),
-                  ),
-                ),
-              ),
+            : const AccountMainSkeleton(),
       ),
-    );
+    ));
   }
 
   void _showTowerSelector() {
-    showDialog<void>(
+    showAccountDialog<void>(
       barrierDismissible: false,
       context: context,
       builder: (dialogContext) => Dialog(
@@ -643,12 +638,12 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                 color: Colors.black,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: const Text(
+                child: Text(
                   'SELECT TOWER',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'HelveticaNeue',
-                    fontSize: 17,
+                    fontSize: context.accountFont(17, mobile: 14),
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: 0.3,
@@ -693,7 +688,8 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                                   tower.towarName ?? '',
                                   style: TextStyle(
                                     fontFamily: 'HelveticaNeue',
-                                    fontSize: 14,
+                                    fontSize:
+                                        context.accountFont(14, mobile: 14),
                                     fontWeight: selected
                                         ? FontWeight.w700
                                         : FontWeight.w500,
@@ -726,13 +722,12 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                      shape: const StadiumBorder(),
                     ),
-                    child: const Text('OK',
+                    child: Text('OK',
                         style: TextStyle(
                             fontFamily: 'HelveticaNeue',
-                            fontSize: 14,
+                            fontSize: context.accountFont(14, mobile: 14),
                             fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -748,87 +743,79 @@ class _AccountManagementViewState extends State<AccountManagementView> {
       bool isMobile, String title, IconData icon, Widget content) {
     return Container(
       width: double.infinity,
-      margin:
-          EdgeInsets.fromLTRB(isMobile ? 12 : 40, 16, isMobile ? 12 : 40, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xffe9ecef)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x04000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: Color(0xffe9ecef),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+      margin: EdgeInsets.fromLTRB(
+          isMobile ? 12 : 40, isMobile ? 12 : 20, isMobile ? 12 : 40, 0),
+      child: Stack(children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xffcbd0d5)),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: Colors.black),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontFamily: 'HelveticaNeue',
-                      fontSize: isMobile ? 12 : 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            child: content,
           ),
-          const Divider(height: 1, color: Color(0xfff0f0f0)),
-          content,
-        ],
-      ),
+        ),
+        Positioned(top: 0, left: 16, child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 6 : 7),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xff707780)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: isMobile ? 13 : 15, color: Colors.black87),
+            const SizedBox(width: 6),
+            Text(title, style: TextStyle(
+              fontFamily: 'HelveticaNeue', fontSize: isMobile ? 10 : 12,
+              fontWeight: FontWeight.w600, color: Colors.black87, letterSpacing: 0.2)),
+          ]),
+        )),
+      ]),
     );
   }
 
   Widget _statusTile(bool isMobile, String label, String count) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
     return _StatusTileHover(
       child: Container(
-        width: isMobile ? (MediaQuery.of(context).size.width - 72) / 3 : 180,
-        constraints: const BoxConstraints(minHeight: 96),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+        width: isMobile ? (screenWidth - 96) / 3 : 150,
+        constraints: BoxConstraints(minHeight: isMobile ? 56 : 88),
+        padding: EdgeInsets.symmetric(
+            horizontal: 6, vertical: isMobile ? 4 : 14),
         decoration: BoxDecoration(
-          color: const Color(0xfff8f9fa),
-          border: Border.all(color: const Color(0xffe9ecef)),
+          color: Colors.white,
+          border: Border.all(color: const Color(0xffcbd0d5)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'HelveticaNeue',
+                  fontSize: isMobile ? 11 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            SizedBox(height: isMobile ? 4 : 6),
             Text(
               count,
               style: TextStyle(
                 fontFamily: 'HelveticaNeue',
-                fontSize: isMobile ? 24 : 28,
+                fontSize: isMobile ? 22 : 26,
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'HelveticaNeue',
-                fontSize: isMobile ? 11 : 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
               ),
             ),
           ],
@@ -843,7 +830,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
       children: [
         Padding(
           padding:
-              EdgeInsets.only(left: 12.0, right: 12.0, top: 14.0, bottom: 16.0),
+              EdgeInsets.only(
+                  left: 12, right: 12,
+                  top: isMobile ? 6 : 14, bottom: isMobile ? 6 : 16),
           child: Wrap(
             alignment: WrapAlignment.spaceEvenly,
             runAlignment: WrapAlignment.center,
@@ -851,7 +840,8 @@ class _AccountManagementViewState extends State<AccountManagementView> {
             spacing: 8.0,
             runSpacing: 12.0,
             children: [
-              InkWell(
+              PoActionFeedback(
+                  child: InkWell(
                 onTap: () {
                   var projectId =
                       widget.projectId! == '' ? "" : widget.projectId!;
@@ -888,8 +878,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                   });
                 },
                 child: _statusTile(isMobile, 'Verified', '$strPoVerified'),
-              ),
-              InkWell(
+              )),
+              PoActionFeedback(
+                  child: InkWell(
                 onTap: () {
                   var projectId =
                       widget.projectId! == '' ? "" : widget.projectId!;
@@ -925,9 +916,11 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                     fetchProjectAccountManagment();
                   });
                 },
-                child: _statusTile(isMobile, 'Assigned', '$strPoAssigned'),
-              ),
-              InkWell(
+                child: _statusTile(
+                    isMobile, 'E-Signed/Assigned', '$strPoAssigned'),
+              )),
+              PoActionFeedback(
+                  child: InkWell(
                 onTap: () {
                   var projectId =
                       widget.projectId! == '' ? "" : widget.projectId!;
@@ -964,7 +957,7 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                   });
                 },
                 child: _statusTile(isMobile, 'Issued', '$strPoIssued'),
-              ),
+              )),
             ],
           ),
         ),
@@ -978,7 +971,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
       children: [
         Padding(
           padding:
-              EdgeInsets.only(left: 12.0, right: 12.0, top: 14.0, bottom: 16.0),
+              EdgeInsets.only(
+                  left: 12, right: 12,
+                  top: isMobile ? 6 : 14, bottom: isMobile ? 6 : 16),
           child: Wrap(
             alignment: WrapAlignment.spaceEvenly,
             runAlignment: WrapAlignment.center,
@@ -1064,7 +1059,7 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                     fetchProjectAccountManagment();
                   });
                 },
-                child: _statusTile(isMobile, 'Assigned', '$strWoAssigned'),
+                child: _statusTile(isMobile, 'E-Signed/Assigned', '$strWoAssigned'),
               ),
               InkWell(
                 onTap: () {
@@ -1119,7 +1114,9 @@ class _AccountManagementViewState extends State<AccountManagementView> {
       children: [
         Padding(
           padding:
-              EdgeInsets.only(left: 12.0, right: 12.0, top: 14.0, bottom: 16.0),
+              EdgeInsets.only(
+                  left: 12, right: 12,
+                  top: isMobile ? 6 : 14, bottom: isMobile ? 6 : 16),
           child: Wrap(
             alignment: WrapAlignment.spaceEvenly,
             runAlignment: WrapAlignment.center,
@@ -1220,10 +1217,9 @@ class _StatusTileHoverState extends State<_StatusTileHover> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color:
-                  _hovered ? const Color(0x26000000) : const Color(0x12000000),
-              blurRadius: _hovered ? 18 : 8,
-              offset: Offset(0, _hovered ? 9 : 3),
+              color: _hovered ? const Color(0x26000000) : const Color(0x12000000),
+              blurRadius: _hovered ? 16 : 8,
+              offset: Offset(0, _hovered ? 7 : 3),
             ),
             const BoxShadow(
               color: Color(0x08000000),

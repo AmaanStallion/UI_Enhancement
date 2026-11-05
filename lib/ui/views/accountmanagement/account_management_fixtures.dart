@@ -17,7 +17,7 @@ Map<String, dynamic>? accountManagementFixture(String url) => {
               "casting_unit": "1",
               "po_verify_date": "2026-11-03",
               "po_checked_by_date": "2026-11-03",
-              "po_verify_flag": "0",
+              "po_verify_flag": "1",
               "po_verify_by": "Aarav Shah",
               "project_id_fk": "1",
               "supplier_from": "1",
@@ -25,7 +25,7 @@ Map<String, dynamic>? accountManagementFixture(String url) => {
               "order_remark": "Sample material for Tower A",
               "remarks": "Sample material for Tower A",
               "chalan_complet_status": "0",
-              "po_approve_status": "0",
+              "po_approve_status": "1",
               "po_approve_by": "Aarav Shah",
               "user_id_fk": "1",
               "po_created_at": "2026-11-03",
@@ -97,7 +97,7 @@ Map<String, dynamic>? accountManagementFixture(String url) => {
                 }
               ],
               "project_delivered": "1",
-              "authorize_flag": "0"
+              "authorize_flag": "1"
             },
             {
               "po_hand_sign_img": "",
@@ -108,7 +108,7 @@ Map<String, dynamic>? accountManagementFixture(String url) => {
               "casting_unit": "1",
               "po_verify_date": "2026-11-03",
               "po_checked_by_date": "2026-11-03",
-              "po_verify_flag": "0",
+              "po_verify_flag": "1",
               "po_verify_by": "Aarav Shah",
               "project_id_fk": "1",
               "supplier_from": "1",
@@ -116,7 +116,7 @@ Map<String, dynamic>? accountManagementFixture(String url) => {
               "order_remark": "Sample material for Tower A",
               "remarks": "Sample material for Tower A",
               "chalan_complet_status": "0",
-              "po_approve_status": "0",
+              "po_approve_status": "1",
               "po_approve_by": "Aarav Shah",
               "user_id_fk": "1",
               "po_created_at": "2026-11-03",
