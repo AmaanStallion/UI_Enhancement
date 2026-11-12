@@ -2,6 +2,120 @@
 
 Reviewed: 2026-11-12 (Asia/Calcutta).
 
+## Authorized eight-file PO card delivery — 2026-11-12
+
+- The user explicitly authorized committing and pushing the reviewed eight-file handover to `codex/ui-po-verified-handover` at `https://github.com/AmaanStallion/UI_Enhancement`, preserving unrelated local changes. The commit containing this record identifies the delivery; exact hash, verified push result and comparison link are reported in chat.
+- Previous delivered baseline: `e3fed6273344812b6433c72e62321dbb79d281a9`. Authorized manifest and final import guide: `docs/ui_po_cards_handover.md`. All eight file hashes matched the reviewed candidate before staging; only these publication-status notes were then updated. All 19 excluded local files were confirmed unchanged.
+- All 15 focused offline tests passed in the isolated baseline-plus-eight-file copy. Publication adds no application changes, backend requests, dependency/build output, Git configuration changes or history replacement beyond the reviewed UI batch.
+
+## Current handover candidate: PO cards and grade form labels — 2026-11-12
+
+- Compare against the last delivered `e3fed6273344812b6433c72e62321dbb79d281a9`; branch remains `codex/ui-po-verified-handover`, origin `https://github.com/AmaanStallion/UI_Enhancement.git`. Integration developer's actual imported hash is not yet confirmed. No commit/push or Git configuration change has been made for this batch.
+- Proposed eight-file manifest and final integration guide: `docs/ui_po_cards_handover.md`. Includes only `porequested.dart`, `podetails.dart`, three existing focused PO tests, new `test/po_card_expansion_test.dart`, this record and the new guide. No renames/deletions, assets/fonts/dependencies/platform changes. The guide records final card sizing/typography/alignment/actions, exclusive expansion, grade labels/exact tooltips, data/callback requirements and preview limitations. Intermediate chronological entries below do not override its final behaviour.
+- Nineteen unrelated dirty files remain excluded and integrity-hashed, including the broad preview test with unrelated older changes. This handover does not absorb them.
+- Source review: both UI files retain byte-identical code before their build methods and unchanged AppUrl reference sequences versus the delivered baseline. Changes are UI/local expansion state only. Narrow selected-file private-key/GitHub/AWS credential-pattern scan found no matches; not a complete secret audit.
+- Validation: all 15 focused offline tests passed in an isolated copy of the delivered baseline plus only the eight candidate files, using remapped existing dependency metadata with `--no-pub`. Covers 390/1920 card alignment/expansion/actions/permissions, full delivery-badge visibility, grade tooltip tap/hover, Verify PO editing/navigation and feedback. Tracked candidate whitespace checks passed. No live backend calls, screenshot acceptance, native upload, fresh dependency resolution or release-build check. This is an uncommitted review candidate; publication still requires explicit authorization.
+
+## Fix: fully visible collapsed Issued delivery badge — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_issued_cards_test.dart`, and this record. Replaced the 182-pixel fixed collapsed Issued height with responsive fixed heights (272 compact / 220 desktop) so the full Delivery Status badge fits after the expanded-style typography and desktop separators increased summary height; compact labels can wrap. Cards remain equal within each layout; 12-pixel top/bottom padding, button gaps/order/sizes, actions and other screens/expanded layouts are unchanged.
+- Added a regression assertion that the full Order Pending badge lies within the summary viewport on mobile/desktop. Initial 204-pixel sizing still clipped the badge; responsive final heights resolved the assertion. No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all eight offline Issued/expansion checks passed at widths 390/1920, including badge visibility without scrolling and equal card heights; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: expanded Issued status badge shape — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Expanded Issued PO status badge now uses the same 5-pixel corner radius as the other status badges instead of a capsule radius. Color, text, padding, actions and permissions remain unchanged on mobile/desktop.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: source review and whitespace check for this radius-only change; no new runtime/screenshots/live backend checks.
+
+## Next UI batch: Issued DOC font-size parity — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Issued DOC. now uses the same responsive font-size expression as DEL. QTY./CHALLAN (`accountFont(14, mobile: 11.5)`), independent of the document helper's compact argument. Other screens retain their font sizing. Button dimensions, placement, wording and document action are unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: source comparison and whitespace check for this font-only change; no new runtime/screenshots/live backend checks.
+
+## Next UI batch: uppercase PO card action labels — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_assigned_cards_test.dart`, `test/po_issued_cards_test.dart`, `test/po_verified_handover_test.dart`, `test/po_card_expansion_test.dart`, PO expectations within the already-dirty `test/account_management_preview_test.dart`, and this record. All Verified/Assigned/Issued collapsed/expanded card actions now use uppercase labels: VIEW DOC/VIEW DOC., DOC., E-SIGN, DEL. QTY., CHALLAN and GRN as applicable. Dialog titles/content and other modules retain their wording.
+- Button dimensions, positions/order/grouping, navigation, handlers and permissions remain unchanged. No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed.
+- Validation: all fourteen focused offline PO checks passed at widths 390/1920; whitespace check passed. No screenshots/live backend calls. Preserve unrelated edits in the broad preview-test file when preparing the next handover.
+
+## Next UI batch: Grade type info-tip wording — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart`, matching expectation in `test/po_verified_handover_test.dart`, and this record. Grade type's tap/hover info tip now reads exactly `Also know as Requirement/Product type`. Visible Grade type label and Grade name tooltip are unchanged.
+- No layout, public interface/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: source/expectation review and whitespace check for this text-only change; no new runtime/screenshots/live backend checks.
+
+## Next UI batch: stronger PO status badge colors — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `lib/ui/views/accountmanagement/podetails.dart`, and this record. Darkened shared PO/delivery/verified-by badge fills across Verified/Assigned/Issued collapsed and expanded cards: yellow blend 34%→55%, blue 30%→45%, green 22%→38%. Retained dark readable badge text, shapes and status mapping. Verify PO summary status text follows the same updated yellow/green colors on its black background.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all ten focused offline PO/Verify checks passed at widths 390/1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: desktop collapsed label separators — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Added the same minus separator as expanded detail rows between each label/value in desktop Verified/Assigned/Issued collapsed cards. Replaced the existing 64-pixel gap with 16-pixel space + 24-pixel minus icon + 24-pixel space, preserving value/arrow/action horizontal anchors. Mobile layout is unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all six offline expansion/alignment checks passed at widths 390/1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: stable expansion and shared typography — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_card_expansion_test.dart`, and this record. Collapsed labels/values now use expanded text styles: HelveticaNeue, 14 desktop / 13 compact; regular body values, bold PO number/status values. Replaced previous collapsed 13/600 values and kept existing status fills.
+- Matched horizontal text origins: collapsed padding is 12 compact / 32 desktop, and mobile label widths use the expanded detail row's 35%-with-76–120 clamp and 10-pixel gap (Verified includes the existing 68-pixel document column + 8-pixel gap when calculating its full-row label width). Expanded right content inset is 6, matching collapsed actions; removed the noninteractive expanded navigation chevron that previously reserved extra trailing space. Body navigation remains unchanged. Expanded arrow inset is calculated from the same action-column center as collapsed. Existing button order/grouping, callbacks and permissions are retained; shared anchors prevent sideways jumps.
+- Added a top-anchored 220ms AnimatedSize transition for vertical expansion/collapse; reduced-motion settings disable it. Expanded details remain below the separate arrow row, with existing conditional actions and only one open card per list. No new state-management framework.
+- No public interface/API/data/integration, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed.
+- Validation: ten offline expansion/Assigned/Issued tests passed at 390/1920 after typography/desktop anchors; all six final expansion checks passed with PO value-column, arrow and action horizontal-position assertions on every state/viewport. Whitespace check passed. No screenshot review or live backend calls.
+
+## Next UI batch: Issued collapsed top-padding parity — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Issued collapsed top padding is now 12 logical pixels, matching Verified/Assigned and the existing bottom padding (previously top was 5). Increased its common fixed height from 175 to 182 to preserve content space. Three-button gaps remain 6 pixels; action sizes/order/handlers, summary spacing and other-state/expanded layouts remain unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: source review and whitespace check for this padding-only adjustment; content space equals the previously tested layout. No new runtime/screenshots/live backend checks.
+
+## Next UI batch: Issued collapsed bottom-padding parity — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Issued collapsed bottom padding is now 12 logical pixels, matching Verified/Assigned (previously 5). Increased its shared fixed height from 168 to 175 to preserve the existing content space and button visibility. Top padding, summary row gaps, hidden scrollbar treatment and 6-pixel button gaps remain unchanged. Other screens/expanded layouts are unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: both offline Issued checks passed at widths 390/1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: hide collapsed summary scrollbars — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Disabled automatic visible scrollbars within the shared Verified/Assigned/Issued collapsed summary area using a local ScrollConfiguration. Issued retains internal scrolling for long content; parent screen scrolling, card sizes, labels, action positions/gaps, callbacks and permissions are unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all ten offline card checks passed across widths 390/1920; whitespace check passed. No screenshot review or live backend calls.
+
+## Next UI batch: collapsed width and label parity — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Verified/Assigned/Issued collapsed cards now share expanded cards' horizontal margins (12 compact / 40 desktop; previously collapsed desktop used 24). Collapsed labels reuse expanded `_poBodyStyle` (HelveticaNeue, 14, black87), replacing size 11/black54. Mobile margins, desktop label/value spacing, fixed Issued height, action order/grouping and handlers remain unchanged; action column follows the requested card-width adjustment.
+- No public interfaces/API/data/integration, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all ten offline expansion/Assigned/Issued checks passed at widths 390/1920; whitespace check passed. No screenshots or live backend calls.
+
+## Next UI batch: desktop collapsed label/value gap — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_card_expansion_test.dart`, and this record. Desktop Verified/Assigned/Issued collapsed cards now use a fixed 180-pixel label column and 64-pixel intervening space, matching the expanded row's 180 + 16 + 24 separator + 24 layout. Values no longer start around 40% across a wide card. Mobile proportions, vertical row spacing, buttons/arrow positions and card heights are unchanged.
+- No public interface, API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files in this change. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: all six offline state/viewport checks passed, including explicit desktop value-column position assertions; whitespace check passed. No screenshots or live backend calls.
+
+## Next UI batch: Verify PO grade labels and info tips — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart`, `test/po_verified_handover_test.dart`, and this record. Verify PO form labels now display Grade type and Grade name instead of Requirement Type and Description / Sub type. Both labels have an adjacent outlined info icon; tapping the label/icon or hovering shows respectively `Grade type: Also known as Requirement type` and `Grade name: Also known as Description/Sub type`. Labels fit their existing columns; input positions/widths, dropdown/edit behaviour and other screen modes remain unchanged.
+- Existing internal row keys/field names/controllers are retained; these are display names only. Flutter Tooltip provides tap/hover and accessibility semantics. No public callback/widget interface, API/data/integration, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed.
+- Validation: all four offline Verify PO checks passed at widths 390/1920 including both exact tooltip messages on tap, explicit desktop hover checks and existing form editing/navigation. Whitespace check passed. No screenshots or live backend requests.
+
+## Next UI batch: exclusive PO card expansion — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, added `test/po_card_expansion_test.dart`, and updated this record. Verified, Assigned and Issued now allow only one expanded card within the current list. Expanding another card clears the previous expansion before opening the new one; the active arrow can still collapse its own card. Arrow-only expansion, card-body navigation, action handlers/permissions and all presentation dimensions remain unchanged.
+- No public interfaces, API/data/integration requirements, assets/fonts/dependencies/platform changes, renames or deletions. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed.
+- Validation: initial mobile test needed scrolling to settle before tapping; corrected the test timing. Six network-blocked cases cover all three states at widths 390/1920, switching to another card, switching back, and manual collapse. No screenshots or live backend calls.
+
+## Next UI batch: trim collapsed Issued bottom space — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Reduced all collapsed Issued cards' fixed height from 190 to 168 logical pixels to trim blank space below Delivery Status without stretching summary rows. Retained 5-pixel top/bottom padding, 6-pixel button gaps, equal action sizes/order/handlers, and scrolling for longer left-column content. Other states/expanded cards are unchanged.
+- No public interfaces/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed. Validation: both offline Issued checks passed at widths 390 and 1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: consistent collapsed summary spacing — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Removed Issued's extra vertical distribution/minimum-height constraint from the left summary column; its five rows now start at the top and use the same 8-pixel row padding as Verified/Assigned. This supersedes the prior Delivery Status bottom-positioning treatment. Longer Issued summaries retain internal scrolling.
+- Issued's fixed 190-pixel height, top/bottom padding, three equal-size buttons, 6-pixel action gaps, handlers and permissions remain unchanged. No public interface/API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `e3fed6273344812b6433c72e62321dbb79d281a9`; uncommitted/unpushed.
+- Validation: all four offline Issued/Assigned checks passed at widths 390 and 1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: Issued action labels and collapsed E-Sign — 2026-11-12
+
+- New comparison baseline: last delivered `e3fed6273344812b6433c72e62321dbb79d281a9`. Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_issued_cards_test.dart`, Issued expectations within the already-dirty `test/account_management_preview_test.dart`, and this record. No added/deleted/renamed files.
+- Collapsed Issued actions are now Del. Qty., Challan and E-Sign (replacing View Doc). E-Sign uses the existing dialog handler and remains disabled when `authorizeFlag != '1'`; Issued signatures retain existing read-only behaviour. Documents remain accessible in the expanded card.
+- Issued action labels shortened: View Doc → Doc., View GRN → GRN, View Challan → Challan. All Issued card action containers are 56×30 logical pixels on mobile and 64×30 on desktop, in collapsed/expanded views. Existing positions/order/grouping otherwise remain, including expanded-only conditional GRN and authorized E-Sign. The 190-pixel fixed collapsed height, padding and 6-pixel button gaps are retained. Verified/Assigned labels and sizes are unchanged.
+- No public widget/callback, backend endpoint/auth/token/payload/business-rule, data requirement, assets/fonts/dependencies/platform changes. Private width helper only. Existing API wiring retained; no new backend operations or preview configuration changes.
+- Validation: four network-blocked Issued/Assigned tests passed at 390/1920, including collapsed E-Sign, expanded document/GRN/Challan actions and explicit equal-size checks for collapsed controls. Whitespace and the existing broad Issued regression also passed. No live backend requests or screenshot review. Uncommitted/unpushed; the broad test's unrelated local changes must remain excluded from future focused handover commits.
+
 ## Authorized follow-up delivery record — 2026-11-12
 
 - The user explicitly authorized committing and pushing the reviewed 12-file handover to `codex/ui-po-verified-handover` in `https://github.com/AmaanStallion/UI_Enhancement`, keeping unrelated changes out. The exact delivery hash, verified push outcome and comparison link are reported in chat after publication; the commit containing this record is the delivery identifier.

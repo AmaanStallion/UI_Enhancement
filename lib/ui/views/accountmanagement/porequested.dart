@@ -1679,23 +1679,16 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                           child: _requestExpandedContent(
                                             rccBookingHistory![index],
                                             child: ListTile(
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                    horizontal:
-                                                        context.accountCompact
-                                                            ? 12
-                                                            : 20,
-                                                    vertical: _hasCollapsiblePoCards ? 0 : 12),
-                                            trailing: _matchesLegacyMobileLayout ||
+                                            contentPadding: EdgeInsets.fromLTRB(
+                                                context.accountCompact ? 12 : 20,
+                                                _hasCollapsiblePoCards ? 0 : 12,
+                                                _hasCollapsiblePoCards ? 6 : (context.accountCompact ? 12 : 20),
+                                                _hasCollapsiblePoCards ? 0 : 12),
+                                            trailing: _hasCollapsiblePoCards || _matchesLegacyMobileLayout ||
                                                     (context.accountCompact &&
-                                                        (args.response
-                                                                    ?.flagRedirect ==
-                                                                'Assigned' ||
-                                                            _isIssued))
+                                                        (args.response?.flagRedirect == 'Assigned' || _isIssued))
                                                 ? null
-                                                : const Icon(
-                                                    Icons.chevron_right_rounded,
-                                                    color: Colors.black54),
+                                                : const Icon(Icons.chevron_right_rounded, color: Colors.black54),
                                             title: _assignedCardContent(
                                                 rccBookingHistory![index],
                                                 Column(
@@ -1781,8 +1774,9 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                       },
                                                                       child:
                                                                           Container(
-                                                                        width:
-                                                                            108,
+                                                                        width: _isIssued ? _issuedActionWidth : 108,
+                                                                        height: _isIssued ? 30 : null,
+                                                                        alignment: _isIssued ? Alignment.center : null,
                                                                         padding: const EdgeInsets
                                                                             .symmetric(
                                                                             vertical:
@@ -1799,7 +1793,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                             const Text(
                                                                           textAlign:
                                                                               TextAlign.center,
-                                                                          "Del. Qty.",
+                                                                          "DEL. QTY.",
                                                                           style: TextStyle(
                                                                               color: Colors.black,
                                                                               fontWeight: FontWeight.w400),
@@ -1876,7 +1870,9 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                             );
                                                                           },
                                                                           child: Container(
-                                                                              width: 108,
+                                                                              width: _isIssued ? _issuedActionWidth : 108,
+                                                                              height: _isIssued ? 30 : null,
+                                                                              alignment: _isIssued ? Alignment.center : null,
                                                                               padding: const EdgeInsets.symmetric(vertical: 4),
                                                                               decoration: BoxDecoration(
                                                                                 border: Border.all(color: Colors.black),
@@ -1884,7 +1880,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                               ),
                                                                               child: const Text(
                                                                                 textAlign: TextAlign.center,
-                                                                                'View GRN',
+                                                                                'GRN',
                                                                                 style: TextStyle(color: Colors.black, fontWeight: FontWeight.w400),
                                                                               )),
                                                                         ))
@@ -1978,7 +1974,9 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                         );
                                                                       },
                                                                       child: Container(
-                                                                          width: 108,
+                                                                          width: _isIssued ? _issuedActionWidth : 108,
+                                                                              height: _isIssued ? 30 : null,
+                                                                              alignment: _isIssued ? Alignment.center : null,
                                                                           padding: const EdgeInsets.symmetric(vertical: 4),
                                                                           decoration: BoxDecoration(
                                                                             border:
@@ -1989,7 +1987,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                           child: const Text(
                                                                             textAlign:
                                                                                 TextAlign.center,
-                                                                            'View Challan',
+                                                                            'CHALLAN',
                                                                             style:
                                                                                 TextStyle(color: Colors.black, fontWeight: FontWeight.w400),
                                                                           )),
@@ -2043,7 +2041,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                               color: _requestBadgeFill(
                                                                                   rccBookingHistory![index].poStatus == '2'
                                                                                       ? const Color(0xff00802b) : const Color(0xffffd633)),
-                                                                              borderRadius: BorderRadius.circular(_isIssued ? 999 : 5),
+                                                                              borderRadius: BorderRadius.circular(5),
                                                                             ),
                                                                             child:
                                                                                 Padding(
@@ -3041,7 +3039,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                 )));
   }
 
-  // Kept in the screen state so independently expanded cards survive recycling.
+  // Kept in screen state so the single expanded card survives recycling.
   final Set<String> _expandedPoRequests = {};
 
   bool get _hasCollapsiblePoCards =>
@@ -3051,6 +3049,21 @@ class _PoRequestedViewState extends State<PoRequestedView> {
       '${_isIssued ? 'issued/' : args.response?.flagRedirect == 'Assigned' ? 'assigned/' : ''}${order.projectIdFk}/${order.towarIdFk}/${order.orderId ?? order.poNo}';
 
   Widget _requestCard(RccBookingHistory order, {required Widget child}) {
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    return AnimatedSize(
+      key: ValueKey('po-card-transition-${_poCardId(order)}'),
+      alignment: Alignment.topCenter,
+      duration: reducedMotion ? Duration.zero : const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: _requestCardContent(order, child: child),
+    );
+  }
+
+  TextStyle _collapsedPoStyle({bool strong = false}) =>
+      (strong ? _poStrongStyle : _poBodyStyle).copyWith(
+        fontSize: context.accountFont(14, mobile: 13));
+
+  Widget _requestCardContent(RccBookingHistory order, {required Widget child}) {
     if (!_hasCollapsiblePoCards) return child;
     final id = _poCardId(order);
     final expanded = _expandedPoRequests.contains(id);
@@ -3082,10 +3095,10 @@ class _PoRequestedViewState extends State<PoRequestedView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          height: _isIssued ? 190 : null,
-          margin: EdgeInsets.fromLTRB(context.accountCompact ? 12 : 24, 8,
-              context.accountCompact ? 12 : 24, 8),
-          padding: EdgeInsets.fromLTRB(14, _isIssued ? 5 : 12, 6, _isIssued ? 5 : 12),
+          height: _isIssued ? (context.accountCompact ? 272 : 220) : null,
+          margin: EdgeInsets.fromLTRB(context.accountCompact ? 12 : 40, 8,
+              context.accountCompact ? 12 : 40, 8),
+          padding: EdgeInsets.fromLTRB(context.accountCompact ? 12 : 32, 12, 6, 12),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -3102,17 +3115,28 @@ class _PoRequestedViewState extends State<PoRequestedView> {
           ),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: _collapsedPoDetails(Column(
-              mainAxisAlignment: _isIssued ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                       for (final field in fields.entries)
-                        Padding(padding: EdgeInsets.only(
-                            bottom: _isIssued && field.key == 'Delivery status' ? 0 : 8), child: Row(
+                        Padding(padding: const EdgeInsets.only(bottom: 8), child: LayoutBuilder(builder: (_, constraints) => Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Expanded(flex: 4, child: Text(field.key,
-                                style: const TextStyle(fontSize: 11, color: Colors.black54))),
-                            const SizedBox(width: 8),
+                            if (context.accountCompact)
+                              SizedBox(width: ((constraints.maxWidth +
+                                  (_matchesLegacyMobileLayout ? 76 : 0)) * .35).clamp(76.0, 120.0),
+                                  child: Text(field.key,
+                                  style: _collapsedPoStyle()))
+                            else
+                              SizedBox(width: 180, child: Text(field.key,
+                                  style: _collapsedPoStyle())),
+                            if (context.accountCompact)
+                              const SizedBox(width: 10)
+                            else ...[
+                              const SizedBox(width: 16),
+                              const Icon(Icons.remove, color: Colors.black54),
+                              const SizedBox(width: 24),
+                            ],
                             Expanded(flex: 6, child: Align(
                               alignment: Alignment.centerLeft,
                               child: (field.key == 'PO Status' || field.key == 'Delivery status')
@@ -3127,33 +3151,33 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                               ? const Color(0xffffd633) : Colors.transparent)),
                                   borderRadius: BorderRadius.circular(5),
                                 ),
-                                child: Text(field.value, style: TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w600,
-                                    color: Colors.black87)),
+                                child: Text(field.value, style: _collapsedPoStyle(strong: true)),
                               )
-                            : Text(field.value, style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                            : Text(field.value, style: _collapsedPoStyle(strong: field.key == 'PO No')),
                             )),
                           ],
-                        )),
+                        ))),
                     ]))),
             const SizedBox(width: 8),
             Column(mainAxisSize: MainAxisSize.min, children: [
               _requestToggle(order),
               const SizedBox(height: 4),
               if (_isIssued) ...[
-                _issuedCardButton('Del. Qty.', () {
+                _issuedCardButton('DEL. QTY.', () {
                   getOrderDetails(orderId: order.orderId ?? '').then((_) => viewDelQty());
                 }),
                 const SizedBox(height: 6),
-                _issuedCardButton('Challan', () => Navigator.push(context,
+                _issuedCardButton('CHALLAN', () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => ChalanScreen(
                     orderId: order.orderId, projectId: args.projectId,
                     towarId: args.response?.towarId, projectName: args.projectName,
                     towarName: args.towarName)))),
                 const SizedBox(height: 6),
               ],
-              _viewDocumentsButton(order, compact: context.accountCompact),
+              if (_isIssued)
+                _assignedSignatureButton(order, enabled: order.authorizeFlag == '1')
+              else
+                _viewDocumentsButton(order, compact: context.accountCompact),
               if (args.response?.flagRedirect == 'Assigned') ...[
                 const SizedBox(height: 8),
                 _assignedSignatureButton(order, enabled: order.authorizeFlag == '1'),
@@ -3165,11 +3189,9 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     ));
   }
 
-  Widget _collapsedPoDetails(Widget child) =>
-      _isIssued ? LayoutBuilder(builder: (_, constraints) =>
-          SingleChildScrollView(child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: child))) : child;
+  Widget _collapsedPoDetails(Widget child) => ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: _isIssued ? SingleChildScrollView(child: child) : child);
 
   Future<void> _openRequestPo(RccBookingHistory order) async {
     await Navigator.push(context, MaterialPageRoute(
@@ -3194,10 +3216,10 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   Color _requestBadgeFill(Color color) {
     if (!_hasCollapsiblePoCards || color == Colors.transparent) return color;
     final opacity = color == const Color(0xffffd633)
-        ? 0.34
+        ? 0.55
         : color == const Color(0xff007acc)
-            ? 0.30
-            : 0.22;
+            ? 0.45
+            : 0.38;
     return Color.alphaBlend(color.withOpacity(opacity), Colors.white);
   }
 
@@ -3215,6 +3237,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
         if (expanded) {
           _expandedPoRequests.remove(id);
         } else {
+          _expandedPoRequests.clear();
           _expandedPoRequests.add(id);
         }
       }),
@@ -3226,7 +3249,8 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     if (!_hasCollapsiblePoCards) return child;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-        padding: EdgeInsets.only(right: context.accountCompact ? 20 : 24),
+        padding: EdgeInsets.only(right: 6 +
+            ((_isIssued ? _issuedActionWidth : (context.accountCompact ? 68 : 108)) - 40) / 2),
         child: Align(alignment: Alignment.topRight, child: _requestToggle(order)),
       ),
       child,
@@ -3251,14 +3275,14 @@ class _PoRequestedViewState extends State<PoRequestedView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_isIssued) ...[
-                _issuedCardButton('Del. Qty.', () {
+                _issuedCardButton('DEL. QTY.', () {
                   getOrderDetails(orderId: order.orderId ?? '')
                       .then((_) => viewDelQty());
                 }),
                 const SizedBox(height: 8),
                 if (order.grn_active == '1') ...[
                   _issuedCardButton(
-                      'View GRN',
+                      'GRN',
                       () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -3270,7 +3294,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                   const SizedBox(height: 8),
                 ],
                 _issuedCardButton(
-                    'View Challan',
+                    'CHALLAN',
                     () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -3292,13 +3316,17 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     ]);
   }
 
+  double get _issuedActionWidth => context.accountCompact ? 56 : 64;
+
   Widget _issuedCardButton(String label, VoidCallback onTap) =>
       PoActionFeedback(
           child: InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(24),
               child: Container(
-                width: context.accountCompact ? 68 : 108,
+                width: _isIssued ? _issuedActionWidth : (context.accountCompact ? 68 : 108),
+                height: _isIssued ? 30 : null,
+                alignment: _isIssued ? Alignment.center : null,
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 decoration: BoxDecoration(
                     border: Border.all(color: Colors.black54),
@@ -3342,12 +3370,14 @@ class _PoRequestedViewState extends State<PoRequestedView> {
         fetchProjectPoRequested();
       } : null,
       child: Container(
-        width: context.accountCompact ? 68 : 108,
+        width: _isIssued ? _issuedActionWidth : (context.accountCompact ? 68 : 108),
+        height: _isIssued ? 30 : null,
+        alignment: _isIssued ? Alignment.center : null,
         padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
             border: Border.all(color: enabled ? Colors.black54 : Colors.black26),
             borderRadius: BorderRadius.circular(24)),
-        child: Text('E-Sign',
+        child: Text('E-SIGN',
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: enabled ? Colors.black87 : Colors.black38,
@@ -3363,18 +3393,21 @@ class _PoRequestedViewState extends State<PoRequestedView> {
       onTap: () => viewDocs(poDocument: order.poDocument ?? const []),
       borderRadius: BorderRadius.circular(24),
       child: Container(
-        width: compact ? 68 : 108,
+        width: _isIssued ? _issuedActionWidth : (compact ? 68 : 108),
+        height: _isIssued ? 30 : null,
+        alignment: _isIssued ? Alignment.center : null,
         padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
             border: Border.all(color: Colors.black),
             borderRadius: BorderRadius.circular(24)),
-        child: Text(compact ? 'View Doc' : 'View Doc.',
+        child: Text(_isIssued ? 'DOC.' : (compact ? 'VIEW DOC' : 'VIEW DOC.'),
             textAlign: TextAlign.center,
             style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.w400,
                 fontSize:
-                    compact ? context.accountFont(13, mobile: 11.5) : 14)),
+                    _isIssued ? context.accountFont(14, mobile: 11.5)
+                        : compact ? context.accountFont(13, mobile: 11.5) : 14)),
       ),
     ));
   }

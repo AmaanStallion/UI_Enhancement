@@ -25,37 +25,55 @@ void main() {
         await tester.pumpAndSettle();
         final card = find.byWidgetPredicate((widget) => widget is Column &&
           widget.key is ValueKey<String> && (widget.key as ValueKey<String>).value.startsWith('po-request-card-issued/')).first;
-        for (final label in ['Del. Qty.', 'Challan']) {
+        for (final label in ['DEL. QTY.', 'CHALLAN', 'E-SIGN']) {
           expect(find.descendant(of: card, matching: find.text(label)), findsOneWidget);
         }
-        expect(find.descendant(of: card, matching: find.textContaining('View Doc')), findsOneWidget);
-        expect(find.descendant(of: card, matching: find.text('View GRN')), findsNothing);
-        expect(find.descendant(of: card, matching: find.text('E-Sign')), findsNothing);
+        expect(find.descendant(of: card, matching: find.text('DOC.')), findsNothing);
+        expect(find.descendant(of: card, matching: find.text('GRN')), findsNothing);
+        for (final label in ['DEL. QTY.', 'CHALLAN', 'E-SIGN']) {
+          final control = find.ancestor(of: find.descendant(of: card, matching: find.text(label)),
+            matching: find.byWidgetPredicate((widget) => widget is Container && widget.constraints?.maxHeight == 30)).first;
+          expect(tester.getSize(control), Size(width < 720 ? 56 : 64, 30));
+        }
         final cards = find.byWidgetPredicate((widget) => widget is Column &&
           widget.key is ValueKey<String> && (widget.key as ValueKey<String>).value.startsWith('po-request-card-issued/'));
         expect(tester.getSize(cards.at(0)).height, tester.getSize(cards.at(1)).height);
+        final deliveryBadge = find.ancestor(
+          of: find.descendant(of: card, matching: find.text('Order Pending')),
+          matching: find.byWidgetPredicate((widget) => widget is Container &&
+            widget.decoration is BoxDecoration &&
+            (widget.decoration as BoxDecoration).borderRadius == BorderRadius.circular(5))).first;
+        final summaryViewport = find.descendant(of: card, matching: find.byType(SingleChildScrollView)).first;
+        expect(tester.getRect(deliveryBadge).bottom,
+          lessThanOrEqualTo(tester.getRect(summaryViewport).bottom));
         final toggle = find.descendant(of: card, matching: find.byType(IconButton));
         final toggleKey = tester.widget<IconButton>(toggle).key!;
-        final delivery = find.descendant(of: card, matching: find.text('Del. Qty.'));
+        final delivery = find.descendant(of: card, matching: find.text('DEL. QTY.'));
         await tester.tap(delivery);
         await tester.pumpAndSettle();
         expect(find.text('Order Details'), findsOneWidget);
         await tester.tap(find.text('Close'));
         await tester.pumpAndSettle();
         expect(tester.widget<IconButton>(find.byKey(toggleKey)).isSelected, isFalse);
-        await tester.tap(find.descendant(of: card, matching: find.textContaining('View Doc')));
+        await tester.tap(find.descendant(of: card, matching: find.text('E-SIGN')));
         await tester.pumpAndSettle();
-        expect(find.text('View Documents'), findsOneWidget);
-        await tester.tap(find.text('OKAY'));
+        expect(find.text('SIGNATURE'), findsOneWidget);
+        await tester.tap(find.text('CLOSE'));
         await tester.pumpAndSettle();
         await tester.tap(find.byKey(toggleKey));
         await tester.pumpAndSettle();
         expect(tester.widget<IconButton>(find.byKey(toggleKey)).isSelected, isTrue);
-        for (final label in ['View GRN', 'View Challan']) {
+        await tester.tap(find.text('DOC.').first);
+        await tester.pumpAndSettle();
+        expect(find.text('View Documents'), findsOneWidget);
+        await tester.tap(find.text('OKAY'));
+        await tester.pumpAndSettle();
+
+        for (final label in ['GRN', 'CHALLAN']) {
           await tester.tap(find.text(label).first);
           await tester.pumpAndSettle();
-          expect(label == 'View GRN' ? find.byType(GrnListingView) : find.byType(ChalanScreen), findsOneWidget);
-          if (label == 'View GRN') {
+          expect(label == 'GRN' ? find.byType(GrnListingView) : find.byType(ChalanScreen), findsOneWidget);
+          if (label == 'GRN') {
             await tester.enterText(find.byKey(const ValueKey('grn-search')), 'no-such-grn');
             await tester.pumpAndSettle();
             expect(find.text('No matching GRNs'), findsOneWidget);
@@ -67,7 +85,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.widget<IconButton>(find.byKey(toggleKey)).isSelected, isTrue);
         }
-        await tester.tap(find.text('E-Sign').first);
+        await tester.tap(find.text('E-SIGN').first);
         await tester.pumpAndSettle();
         expect(find.text('SIGNATURE'), findsOneWidget);
         await tester.tap(find.text('CLOSE'));

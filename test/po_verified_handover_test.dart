@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stallion/models/notification_args.dart';
@@ -51,7 +52,7 @@ void main() {
             widget.key is ValueKey<String> &&
             (widget.key as ValueKey<String>).value.startsWith('po-request-toggle-'));
         final toggleKey = tester.widget<IconButton>(toggles.first).key!;
-        await tester.tap(find.textContaining('View Doc').first);
+        await tester.tap(find.textContaining('VIEW DOC').first);
         await tester.pumpAndSettle();
         expect(find.text('View Documents'), findsOneWidget);
         await tester.tap(find.text('OKAY'));
@@ -59,6 +60,30 @@ void main() {
         expect(tester.widget<IconButton>(find.byKey(toggleKey)).isSelected, isFalse);
         await tester.tap(find.text('PO No').first);
         await tester.pumpAndSettle();
+        for (final entry in {
+          'Requirement Type': 'Also know as Requirement/Product type',
+          'Description / Sub type': 'Grade name: Also known as Description/Sub type',
+        }.entries) {
+          final tip = find.byKey(ValueKey('po-grade-info-${entry.key}'));
+          await tester.ensureVisible(tip);
+          await tester.pumpAndSettle();
+          expect(find.descendant(of: tip, matching: find.byIcon(Icons.info_outline)), findsOneWidget);
+          await tester.tap(tip);
+          await tester.pump(const Duration(milliseconds: 400));
+          expect(find.text(entry.value), findsOneWidget);
+          Tooltip.dismissAllToolTips();
+          await tester.pumpAndSettle();
+          if (width >= 720) {
+            final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+            await mouse.addPointer(location: Offset.zero);
+            await mouse.moveTo(tester.getCenter(tip));
+            await tester.pump(const Duration(milliseconds: 700));
+            expect(find.text(entry.value), findsOneWidget);
+            await mouse.removePointer();
+            Tooltip.dismissAllToolTips();
+            await tester.pumpAndSettle();
+          }
+        }
         expect(find.byType(PoDetails), findsOneWidget);
         final summary = tester.widget<Container>(find.byKey(const ValueKey('verify-po-summary-card')));
         expect((summary.decoration as BoxDecoration).color, Colors.black);

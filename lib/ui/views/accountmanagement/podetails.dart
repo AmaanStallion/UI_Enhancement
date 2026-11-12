@@ -3208,9 +3208,9 @@ class _PoDetailsState extends State<PoDetails> {
     String value(String? text) => text == null || text.trim().isEmpty ? '—' : text;
     final status = const {'0': 'Pending', '1': 'Assigned', '2': 'Issued', '3': 'Dispute'}[order.poStatus] ?? '---';
     final statusColor = order.poStatus == '2'
-        ? Color.alphaBlend(const Color(0xff00802b).withOpacity(0.22), Colors.white)
+        ? Color.alphaBlend(const Color(0xff00802b).withOpacity(0.38), Colors.white)
         : ['0', '1', '3'].contains(order.poStatus)
-            ? Color.alphaBlend(const Color(0xffffd633).withOpacity(0.34), Colors.white)
+            ? Color.alphaBlend(const Color(0xffffd633).withOpacity(0.55), Colors.white)
             : Colors.white;
     Widget detail(String label, String text, {Color color = Colors.white}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -3279,14 +3279,33 @@ class _PoDetailsState extends State<PoDetails> {
       {required List<Widget> children,
       CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start}) {
     final compactLabels = widget.poId == 'Verified';
-    final isDescription = label == 'Description / Sub type';
-    final displayLabel = isDescription ? 'Description /\nSub type -' : '$label -';
+    final gradeLabel = const {
+      'Requirement Type': 'Grade type',
+      'Description / Sub type': 'Grade name',
+    }[label];
+    final infoMessage = const {
+      'Requirement Type': 'Also know as Requirement/Product type',
+      'Description / Sub type': 'Grade name: Also known as Description/Sub type',
+    }[label];
+    final displayLabel = '${gradeLabel ?? label} -';
+    final labelText = FittedBox(
+      fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
+      child: Text(displayLabel, maxLines: 1, style: TextStyle(
+        fontSize: context.accountCompact ? 12 : 14,
+        height: 1.1, fontWeight: FontWeight.w600, color: Colors.black87)));
     final Widget title = compactLabels
         ? SizedBox(height: _poFieldHeight,
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-              child: Text(displayLabel, maxLines: isDescription ? 2 : 1, style: TextStyle(
-                  fontSize: context.accountCompact ? 12 : 14,
-                  height: 1.1, fontWeight: FontWeight.w600, color: Colors.black87))))
+            child: infoMessage == null ? labelText : Tooltip(
+              key: ValueKey('po-grade-info-$label'),
+              message: infoMessage,
+              triggerMode: TooltipTriggerMode.tap,
+              waitDuration: const Duration(milliseconds: 350),
+              showDuration: const Duration(seconds: 4),
+              child: Row(children: [
+                Flexible(child: labelText),
+                const SizedBox(width: 4),
+                const Icon(Icons.info_outline, size: 16, color: Colors.black54),
+              ])))
         : Text('$label -', style: TextStyle(
             fontSize: context.accountFont(15, mobile: 13),
             fontWeight: FontWeight.w600, color: Colors.black87));

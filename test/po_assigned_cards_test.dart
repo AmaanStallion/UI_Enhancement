@@ -56,8 +56,8 @@ void main() {
         for (final label in ['PO No', 'PO created date', 'PO Status', 'Booking type', 'Delivery status']) {
           expect(find.descendant(of: firstCard, matching: find.text(label)), findsOneWidget);
         }
-        final doc = find.descendant(of: firstCard, matching: find.textContaining('View Doc'));
-        final sign = find.descendant(of: firstCard, matching: find.text('E-Sign'));
+        final doc = find.descendant(of: firstCard, matching: find.textContaining('VIEW DOC'));
+        final sign = find.descendant(of: firstCard, matching: find.text('E-SIGN'));
         expect(doc, findsOneWidget);
         expect(sign, findsOneWidget);
         expect(tester.getCenter(doc).dx, closeTo(tester.getCenter(sign).dx, 1));
@@ -75,7 +75,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.widget<IconButton>(find.byKey(toggleKey)).isSelected, isFalse);
         final secondCard = card('PREVIEW-002');
-        final disabledSign = find.descendant(of: secondCard, matching: find.text('E-Sign'));
+        final disabledSign = find.descendant(of: secondCard, matching: find.text('E-SIGN'));
         await tester.ensureVisible(disabledSign);
         final disabledInk = find.ancestor(of: disabledSign, matching: find.byType(InkWell)).first;
         expect(tester.widget<InkWell>(disabledInk).onTap, isNull);
@@ -89,8 +89,8 @@ void main() {
         await tester.tap(find.byKey(toggleKey));
         await tester.pumpAndSettle();
         expect(find.text('P.O. No.'), findsNothing);
-        expect(find.textContaining('View Doc'), findsWidgets);
-        expect(find.text('E-Sign'), findsWidgets);
+        expect(find.textContaining('VIEW DOC'), findsWidgets);
+        expect(find.text('E-SIGN'), findsWidgets);
         expect(tester.takeException(), isNull);
       }, createHttpClient: (_) => throw StateError('Network disabled for Assigned UI tests'));
     });
