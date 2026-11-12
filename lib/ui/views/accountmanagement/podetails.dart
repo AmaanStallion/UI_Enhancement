@@ -1385,8 +1385,9 @@ class _PoDetailsState extends State<PoDetails> {
                                   ).then((_) => {});
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 5),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: widget.poId == 'Verified' ? 3 : 5),
                                   decoration: BoxDecoration(
                                     // border: Border.all(color: Colors.black26),
                                     borderRadius:
@@ -1558,7 +1559,12 @@ class _PoDetailsState extends State<PoDetails> {
                                     widget.poId == 'Verified' && index == 0 ? 4 : 8, 8, 8),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
+                                    border: Border.all(color: widget.poId == 'Verified'
+                                        ? const Color(0xffe1e5e9) : Colors.grey),
+                                    boxShadow: widget.poId == 'Verified' ? const [
+                                      BoxShadow(color: Color(0x10000000),
+                                          blurRadius: 10, offset: Offset(0, 3)),
+                                    ] : null,
                                     borderRadius: BorderRadius.circular(10),
                                     color: Colors.white,
                                     shape: BoxShape.rectangle,
@@ -1632,315 +1638,36 @@ class _PoDetailsState extends State<PoDetails> {
                                 ),
                               );
                             }),
+                        if (widget.poId == 'Verified') ...[
+                          Padding(
+                            padding: EdgeInsets.only(
+                                left: 8 + (context.accountCompact ? 12 : 40),
+                                right: 8 + (context.accountCompact ? 12 : 40)),
+                            child: _otherRemarksField(),
+                          ),
+                          verticalSpaceSmall,
+                        ],
                         Container(
                           width: widget.poId == 'Verified' ? double.infinity : null,
                           padding: EdgeInsets.symmetric(
-                              horizontal: widget.poId == 'Verified' ? 8 : (context.accountCompact ? 12 : 50)),
+                              horizontal: widget.poId == 'Verified'
+                                  ? 8 + (context.accountCompact ? 12 : 40)
+                                  : (context.accountCompact ? 12 : 50)),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (widget.poId == 'Verified')
+                                _poFormRow('Upload', children: [
+                                  const Text('Upload'),
+                                  Expanded(child: _uploadControls()),
+                                ])
+                              else ...[
                               Text("Upload",
                                   style: TextStyle(
                                       fontSize: context.accountFont(14,
                                           mobile: 14))), //
-                              AccountFlowRow(
-                                children: [
-                                  PoActionFeedback(
-                                      child: InkWell(
-                                    onTap: () async {
-                                      // if (arrayFiles.length != 4) {
-                                      FilePickerResult? result =
-                                          await FilePicker.platform.pickFiles(
-                                        type: FileType.custom,
-                                        allowedExtensions: [
-                                          'jpg',
-                                          'jpeg',
-                                          'png',
-                                          // "mp4",
-                                          "pdf",
-                                        ],
-                                      );
-                                      if (result != null) {
-                                        PlatformFile file = result.files.first;
-                                        Uint8List? fileBytes =
-                                            result.files.first.bytes;
-                                        String fileName =
-                                            result.files.first.name;
-                                        setState(() {
-                                          arrayFilesBytes.add(fileBytes);
-                                          arrayFiles.add(file);
-                                        });
-
-                                        //inspect(arrayFiles[0]);
-                                      } else {
-                                        // User canceled the picker
-                                      }
-                                      // }
-                                    },
-                                    child: Image.asset(
-                                      'images/projectmanagement/img5.png',
-                                      height: widget.poId == 'Verified' ? 64 : 100,
-                                      width: widget.poId == 'Verified' ? 64 : 100,
-                                    ),
-                                  )),
-                                  const SizedBox(width: 10),
-                                  for (int j = 0;
-                                      j <
-                                          widget
-                                              .orderDetails!.poDocument!.length;
-                                      j++)
-                                    AccountFlowRow(
-                                      children: [
-                                        if (widget.orderDetails!.poDocument?[j]
-                                                    .split('.')
-                                                    .last
-                                                    .toLowerCase() ==
-                                                'jpg' ||
-                                            widget.orderDetails!.poDocument?[j]
-                                                    .split('.')
-                                                    .last
-                                                    .toLowerCase() ==
-                                                'jpeg' ||
-                                            widget.orderDetails!.poDocument?[j]
-                                                    .split('.')
-                                                    .last
-                                                    .toLowerCase() ==
-                                                'png') //'jpg','jpeg','png',
-                                          Container(
-                                            padding: const EdgeInsets.only(
-                                                right: 10),
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                (useAccountManagementTestData
-                                                    ? Icon(
-                                                        Icons
-                                                            .description_outlined,
-                                                        size: widget.poId == 'Verified' ? 36 : 48,
-                                                        color: Colors.black54)
-                                                    : Image.network(
-                                                        '${AppUrl.poDocPath}${widget.orderDetails!.poDocument?[j]}',
-                                                        // ),
-                                                        // File(widget
-                                                        //     .orderDetails!.poDocument![j]),
-                                                        height: widget.poId == 'Verified' ? 64 : 100,
-                                                        width: widget.poId == 'Verified' ? 64 : 100,
-                                                        fit: BoxFit.fill,
-                                                      )),
-                                                // Positioned(
-                                                //   right: -10,
-                                                //   top: -10,
-                                                //   child: InkWell(
-                                                //     onTap: () {
-                                                //       // setState(() {
-                                                //       //   arrayFiles
-                                                //       //       .remove(arrayFiles[j]);
-                                                //       //   arrayFilesBytes
-                                                //       //       .remove(arrayFilesBytes[j]);
-                                                //       // });
-                                                //     },
-                                                //     child: const Icon(Icons.close),
-                                                //   ),
-                                                // )
-                                              ],
-                                            ),
-                                          ),
-                                        if (widget.orderDetails!.poDocument?[j]
-                                                .split('.')
-                                                .last
-                                                .toLowerCase() ==
-                                            'pdf')
-                                          Container(
-                                            padding: const EdgeInsets.only(
-                                                right: 10),
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                PoActionFeedback(
-                                                    child: InkWell(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) {
-                                                          return (useAccountManagementTestData
-                                                              ? const AccountManagementPreviewDocumentScreen()
-                                                              : PdfViewer(
-                                                                  fileName: widget
-                                                                      .orderDetails!
-                                                                      .poDocument?[j],
-                                                                  fileUrl:
-                                                                      '${AppUrl.globalGrnPath}${widget.orderDetails!.poDocument?[j]}',
-
-                                                                  // isLocalFileUpload: false,
-                                                                  // localFiles:
-                                                                  //     arrayFiles[j].path,
-                                                                  // fileName: widget
-                                                                  //     .orderDetails!
-                                                                  //     .poDocument?[j],
-                                                                  // fileUrl: arrayFiles[j].path,
-                                                                ));
-                                                        },
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(
-                                                        color: Colors.grey,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              6),
-                                                    ),
-                                                    // width: 100,
-                                                    child: Image.asset(
-                                                      'images/projectmanagement/pdf.png',
-                                                      width: widget.poId == 'Verified' ? 64 : 100,
-                                                      height: widget.poId == 'Verified' ? 64 : 100,
-                                                    ),
-                                                  ),
-                                                )),
-                                                Positioned(
-                                                  right: -10,
-                                                  top: -10,
-                                                  child: PoActionFeedback(
-                                                      child: InkWell(
-                                                    onTap: () {
-                                                      // setState(() {
-                                                      //   arrayFiles
-                                                      //       .remove(arrayFiles[j]);
-                                                      //   arrayFilesBytes
-                                                      //       .remove(arrayFilesBytes[j]);
-                                                      // });
-                                                    },
-                                                    child:
-                                                        const Icon(Icons.close),
-                                                  )),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  const SizedBox(width: 10),
-                                  for (int j = 0; j < arrayFiles.length; j++)
-                                    AccountFlowRow(
-                                      children: [
-                                        if (arrayFiles[j].extension == 'jpg' ||
-                                            arrayFiles[j].extension == 'jpeg' ||
-                                            arrayFiles[j].extension ==
-                                                'png') //'jpg','jpeg','png',
-                                          Container(
-                                            padding: const EdgeInsets.only(
-                                                right: 10),
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                Image.file(
-                                                  File(
-                                                      arrayFiles[j].path ?? ''),
-                                                  height: widget.poId == 'Verified' ? 64 : 100,
-                                                  width: widget.poId == 'Verified' ? 64 : 100,
-                                                  fit: BoxFit.fill,
-                                                ),
-                                                Positioned(
-                                                  right: -10,
-                                                  top: -10,
-                                                  child: PoActionFeedback(
-                                                      child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        arrayFiles.remove(
-                                                            arrayFiles[j]);
-                                                        arrayFilesBytes.remove(
-                                                            arrayFilesBytes[j]);
-                                                      });
-                                                    },
-                                                    child:
-                                                        const Icon(Icons.close),
-                                                  )),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        if (arrayFiles[j].extension == 'pdf')
-                                          Container(
-                                            padding: const EdgeInsets.only(
-                                                right: 10),
-                                            child: Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                PoActionFeedback(
-                                                    child: InkWell(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) {
-                                                          return (useAccountManagementTestData
-                                                              ? const AccountManagementPreviewDocumentScreen()
-                                                              : PdfViewer(
-                                                                  isLocalFileUpload:
-                                                                      true,
-                                                                  localFiles:
-                                                                      arrayFiles[
-                                                                              j]
-                                                                          .path,
-                                                                  fileName:
-                                                                      arrayFiles[
-                                                                              j]
-                                                                          .name,
-                                                                  fileUrl:
-                                                                      arrayFiles[
-                                                                              j]
-                                                                          .path,
-                                                                ));
-                                                        },
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(
-                                                        color: Colors.grey,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              6),
-                                                    ),
-                                                    // width: 100,
-                                                    child: Image.asset(
-                                                      'images/projectmanagement/pdf.png',
-                                                      width: widget.poId == 'Verified' ? 64 : 100,
-                                                      height: widget.poId == 'Verified' ? 64 : 100,
-                                                    ),
-                                                  ),
-                                                )),
-                                                Positioned(
-                                                  right: -10,
-                                                  top: -10,
-                                                  child: PoActionFeedback(
-                                                      child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        arrayFiles.remove(
-                                                            arrayFiles[j]);
-                                                        arrayFilesBytes.remove(
-                                                            arrayFilesBytes[j]);
-                                                      });
-                                                    },
-                                                    child:
-                                                        const Icon(Icons.close),
-                                                  )),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                ],
-                              ),
+                                _uploadControls(),
+                              ],
                             ],
                           ),
                         ),
@@ -1952,74 +1679,7 @@ class _PoDetailsState extends State<PoDetails> {
                           child: SizedBox(
                               child: Column(
                             children: [
-                              _poFormRow('Other Remarks',
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 150,
-                                    child: Text(
-                                        context.accountCompact
-                                            ? 'Other Remarks -'
-                                            : 'Other Remarks',
-                                        style: normalText),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.only(
-                                          left: context.accountCompact ? 0 : 40,
-                                          right: 10,
-                                          top: 0),
-                                      child: SizedBox(
-                                        child: TextFormField(
-                                          enabled: widget.poId == 'Verified' ||
-                                              !flagBtnHideApproveReject,
-                                          controller: _txtControllerRemark,
-                                          minLines: widget.poId == 'Verified' ? 2 : null,
-                                          maxLines: widget.poId == 'Verified' ? 2 : 3,
-                                          onChanged: (String str) {
-                                            strRemark = str;
-                                          },
-                                          style: widget.poId == 'Verified'
-                                              ? normalText.copyWith(
-                                                  fontSize: context.accountFont(15, mobile: 12.6), height: 1.5)
-                                              : context.accountCompact
-                                                  ? normalText.copyWith(fontSize: 12.6)
-                                                  : normalText,
-                                          decoration: InputDecoration(
-                                            hintText: 'Enter Other Remarks',
-                                            filled: true,
-                                            fillColor: Colors.white,
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                    horizontal: context.accountCompact ? 12.6 : 14,
-                                                    vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 10.8 : 12)),
-                                            border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                    color: Color(0xffd0d4d8))),
-                                            enabledBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                    color: Color(0xffd0d4d8))),
-                                            disabledBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                    color: Color(0xffd0d4d8))),
-                                            focusedBorder: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                borderSide: const BorderSide(
-                                                    color: Colors.black)),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
+                              if (widget.poId != 'Verified') _otherRemarksField(),
                               verticalSpaceSmall,
                               AccountFlowRow(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -3082,6 +2742,374 @@ class _PoDetailsState extends State<PoDetails> {
     );
   }
 
+  Widget _uploadControls() => AccountFlowRow(
+                                children: [
+                                  PoActionFeedback(
+                                      child: InkWell(
+                                    onTap: () async {
+                                      // if (arrayFiles.length != 4) {
+                                      FilePickerResult? result =
+                                          await FilePicker.platform.pickFiles(
+                                        type: FileType.custom,
+                                        allowedExtensions: [
+                                          'jpg',
+                                          'jpeg',
+                                          'png',
+                                          // "mp4",
+                                          "pdf",
+                                        ],
+                                      );
+                                      if (result != null) {
+                                        PlatformFile file = result.files.first;
+                                        Uint8List? fileBytes =
+                                            result.files.first.bytes;
+                                        String fileName =
+                                            result.files.first.name;
+                                        setState(() {
+                                          arrayFilesBytes.add(fileBytes);
+                                          arrayFiles.add(file);
+                                        });
+
+                                        //inspect(arrayFiles[0]);
+                                      } else {
+                                        // User canceled the picker
+                                      }
+                                      // }
+                                    },
+                                    child: Image.asset(
+                                      'images/projectmanagement/img5.png',
+                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                    ),
+                                  )),
+                                  const SizedBox(width: 10),
+                                  for (int j = 0;
+                                      j <
+                                          widget
+                                              .orderDetails!.poDocument!.length;
+                                      j++)
+                                    AccountFlowRow(
+                                      children: [
+                                        if (widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'jpg' ||
+                                            widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'jpeg' ||
+                                            widget.orderDetails!.poDocument?[j]
+                                                    .split('.')
+                                                    .last
+                                                    .toLowerCase() ==
+                                                'png') //'jpg','jpeg','png',
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                (useAccountManagementTestData
+                                                    ? Icon(
+                                                        Icons
+                                                            .description_outlined,
+                                                        size: widget.poId == 'Verified' ? 36 : 48,
+                                                        color: Colors.black54)
+                                                    : Image.network(
+                                                        '${AppUrl.poDocPath}${widget.orderDetails!.poDocument?[j]}',
+                                                        // ),
+                                                        // File(widget
+                                                        //     .orderDetails!.poDocument![j]),
+                                                        height: widget.poId == 'Verified' ? 64 : 100,
+                                                        width: widget.poId == 'Verified' ? 64 : 100,
+                                                        fit: BoxFit.fill,
+                                                      )),
+                                                // Positioned(
+                                                //   right: -10,
+                                                //   top: -10,
+                                                //   child: InkWell(
+                                                //     onTap: () {
+                                                //       // setState(() {
+                                                //       //   arrayFiles
+                                                //       //       .remove(arrayFiles[j]);
+                                                //       //   arrayFilesBytes
+                                                //       //       .remove(arrayFilesBytes[j]);
+                                                //       // });
+                                                //     },
+                                                //     child: const Icon(Icons.close),
+                                                //   ),
+                                                // )
+                                              ],
+                                            ),
+                                          ),
+                                        if (widget.orderDetails!.poDocument?[j]
+                                                .split('.')
+                                                .last
+                                                .toLowerCase() ==
+                                            'pdf')
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                PoActionFeedback(
+                                                    child: InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) {
+                                                          return (useAccountManagementTestData
+                                                              ? const AccountManagementPreviewDocumentScreen()
+                                                              : PdfViewer(
+                                                                  fileName: widget
+                                                                      .orderDetails!
+                                                                      .poDocument?[j],
+                                                                  fileUrl:
+                                                                      '${AppUrl.globalGrnPath}${widget.orderDetails!.poDocument?[j]}',
+
+                                                                  // isLocalFileUpload: false,
+                                                                  // localFiles:
+                                                                  //     arrayFiles[j].path,
+                                                                  // fileName: widget
+                                                                  //     .orderDetails!
+                                                                  //     .poDocument?[j],
+                                                                  // fileUrl: arrayFiles[j].path,
+                                                                ));
+                                                        },
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: Colors.grey,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    // width: 100,
+                                                    child: Image.asset(
+                                                      'images/projectmanagement/pdf.png',
+                                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                                    ),
+                                                  ),
+                                                )),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      // setState(() {
+                                                      //   arrayFiles
+                                                      //       .remove(arrayFiles[j]);
+                                                      //   arrayFilesBytes
+                                                      //       .remove(arrayFilesBytes[j]);
+                                                      // });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  const SizedBox(width: 10),
+                                  for (int j = 0; j < arrayFiles.length; j++)
+                                    AccountFlowRow(
+                                      children: [
+                                        if (arrayFiles[j].extension == 'jpg' ||
+                                            arrayFiles[j].extension == 'jpeg' ||
+                                            arrayFiles[j].extension ==
+                                                'png') //'jpg','jpeg','png',
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Image.file(
+                                                  File(
+                                                      arrayFiles[j].path ?? ''),
+                                                  height: widget.poId == 'Verified' ? 64 : 100,
+                                                  width: widget.poId == 'Verified' ? 64 : 100,
+                                                  fit: BoxFit.fill,
+                                                ),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        arrayFiles.remove(
+                                                            arrayFiles[j]);
+                                                        arrayFilesBytes.remove(
+                                                            arrayFilesBytes[j]);
+                                                      });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                        if (arrayFiles[j].extension == 'pdf')
+                                          Container(
+                                            padding: const EdgeInsets.only(
+                                                right: 10),
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                PoActionFeedback(
+                                                    child: InkWell(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) {
+                                                          return (useAccountManagementTestData
+                                                              ? const AccountManagementPreviewDocumentScreen()
+                                                              : PdfViewer(
+                                                                  isLocalFileUpload:
+                                                                      true,
+                                                                  localFiles:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .path,
+                                                                  fileName:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .name,
+                                                                  fileUrl:
+                                                                      arrayFiles[
+                                                                              j]
+                                                                          .path,
+                                                                ));
+                                                        },
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                        color: Colors.grey,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              6),
+                                                    ),
+                                                    // width: 100,
+                                                    child: Image.asset(
+                                                      'images/projectmanagement/pdf.png',
+                                                      width: widget.poId == 'Verified' ? 64 : 100,
+                                                      height: widget.poId == 'Verified' ? 64 : 100,
+                                                    ),
+                                                  ),
+                                                )),
+                                                Positioned(
+                                                  right: -10,
+                                                  top: -10,
+                                                  child: PoActionFeedback(
+                                                      child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        arrayFiles.remove(
+                                                            arrayFiles[j]);
+                                                        arrayFilesBytes.remove(
+                                                            arrayFilesBytes[j]);
+                                                      });
+                                                    },
+                                                    child:
+                                                        const Icon(Icons.close),
+                                                  )),
+                                                )
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              );
+
+  Widget _otherRemarksField() => _poFormRow('Other Remarks',
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 150,
+                                    child: Text(
+                                        context.accountCompact
+                                            ? 'Other Remarks -'
+                                            : 'Other Remarks',
+                                        style: normalText),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                          left: widget.poId == 'Verified' ? 0 : (context.accountCompact ? 0 : 40),
+                                          right: widget.poId == 'Verified' ? 0 : 10,
+                                          top: 0),
+                                      child: SizedBox(
+                                        child: TextFormField(
+                                          enabled: widget.poId == 'Verified' ||
+                                              !flagBtnHideApproveReject,
+                                          controller: _txtControllerRemark,
+                                          minLines: widget.poId == 'Verified' ? 2 : null,
+                                          maxLines: widget.poId == 'Verified' ? 2 : 3,
+                                          onChanged: (String str) {
+                                            strRemark = str;
+                                          },
+                                          style: widget.poId == 'Verified'
+                                              ? normalText.copyWith(
+                                                  fontSize: context.accountFont(15, mobile: 12.6), height: 1.5)
+                                              : context.accountCompact
+                                                  ? normalText.copyWith(fontSize: 12.6)
+                                                  : normalText,
+                                          decoration: InputDecoration(
+                                            hintText: 'Enter Other Remarks',
+                                            filled: true,
+                                            fillColor: Colors.white,
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                    horizontal: context.accountCompact ? 12.6 : 14,
+                                                    vertical: widget.poId == 'Verified' ? 6 : (context.accountCompact ? 10.8 : 12)),
+                                            border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            enabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            disabledBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Color(0xffd0d4d8))),
+                                            focusedBorder: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                borderSide: const BorderSide(
+                                                    color: Colors.black)),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              );
+
   Widget _poFooterCapsule(String label, {bool enabled = true}) => LayoutBuilder(
       builder: (context, constraints) => Container(
       key: ValueKey('po-footer-$label'),
@@ -3251,19 +3279,12 @@ class _PoDetailsState extends State<PoDetails> {
       {required List<Widget> children,
       CrossAxisAlignment crossAxisAlignment = CrossAxisAlignment.start}) {
     final compactLabels = widget.poId == 'Verified';
-    final stackedLabel = const {
-      'Requirement Type': 'Requirement\nType -',
-      'Description / Sub type': 'Description /\nSub type -',
-      'Requirement For': 'Requirement\nFor -',
-      'Requirement Date': 'Requirement\nDate -',
-      'Unit Price (₹)': 'Unit\nPrice (₹) -',
-      'Total Price (₹)': 'Total\nPrice (₹) -',
-      'Other Remarks': 'Other\nRemarks -',
-    }[label] ?? '$label -';
+    final isDescription = label == 'Description / Sub type';
+    final displayLabel = isDescription ? 'Description /\nSub type -' : '$label -';
     final Widget title = compactLabels
         ? SizedBox(height: _poFieldHeight,
             child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft,
-              child: Text(stackedLabel, maxLines: 2, style: TextStyle(
+              child: Text(displayLabel, maxLines: isDescription ? 2 : 1, style: TextStyle(
                   fontSize: context.accountCompact ? 12 : 14,
                   height: 1.1, fontWeight: FontWeight.w600, color: Colors.black87))))
         : Text('$label -', style: TextStyle(
@@ -3862,20 +3883,30 @@ class _PoDetailsState extends State<PoDetails> {
                     borderRadius: const BorderRadius.all(Radius.circular(8.0))),
                 child: Padding(
                   padding: const EdgeInsets.only(left: 10.0, right: 10.0),
-                  child: TextField(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextField(
                     // controller: _txtControllerRequirmentType[indexRow],
                     controller:
                         arrayList[indexRow].editingControllerGradeTypeName,
                     autofocus: false,
                     enabled: false,
+                    textAlign: TextAlign.start,
+                    textAlignVertical: TextAlignVertical.center,
                     style: TextStyle(
                         color: Colors.black,
                         fontSize: context.accountFont(15.0, mobile: 12.6)),
                     decoration: InputDecoration(
+                      isDense: widget.poId == 'Verified',
                       contentPadding:
-                          EdgeInsets.only(top: 12, bottom: 12, right: 28),
+                          EdgeInsets.only(
+                            top: widget.poId == 'Verified' ? 0 : 12,
+                            bottom: widget.poId == 'Verified' ? 0 : 12,
+                            left: 0,
+                            right: 28),
                       border: InputBorder.none,
                       hintText: 'Select Requirement Type',
+                    ),
                     ),
                   ),
                 ),
@@ -3883,7 +3914,7 @@ class _PoDetailsState extends State<PoDetails> {
               Positioned(
                   right: 10,
                   child: Center(
-                      child: Icon(Icons.arrow_drop_down,
+                      child: Icon(widget.poId == 'Verified' ? Icons.keyboard_arrow_down : Icons.arrow_drop_down,
                           key: const ValueKey('po-requirement-type-dropdown-icon'),
                           size: context.accountCompact ? 18 : 24))),
             ]),
@@ -4476,6 +4507,7 @@ class _PoDetailsState extends State<PoDetails> {
               child: useAccountManagementTestData
                   ? _previewUnitField(index, canEdit)
                   : SearchChoices.single(
+                icon: Icon(widget.poId == 'Verified' ? Icons.keyboard_arrow_down : Icons.arrow_drop_down),
                 iconSize: context.accountCompact ? 18 : 24,
                 style: TextStyle(
                     fontSize: context.accountFont(15.0, mobile: 12.6),
@@ -4547,7 +4579,8 @@ class _PoDetailsState extends State<PoDetails> {
                     : arrayList[index].casting_unit_name.toString(),
                 style: TextStyle(fontSize: context.accountCompact ? 12.6 : 15),
                 overflow: TextOverflow.ellipsis)),
-            Icon(Icons.arrow_drop_down, size: context.accountCompact ? 18 : 24),
+            Icon(widget.poId == 'Verified' ? Icons.keyboard_arrow_down : Icons.arrow_drop_down,
+                size: context.accountCompact ? 18 : 24),
           ]),
         ),
       );

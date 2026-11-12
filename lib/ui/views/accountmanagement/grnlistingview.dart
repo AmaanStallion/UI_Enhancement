@@ -1,3 +1,6 @@
+import 'package:stallion/ui/views/accountmanagement/account_management_loading.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_document.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_network.dart';
@@ -30,6 +33,7 @@ class _GrnListingViewState extends State<GrnListingView> {
   NetworkHandler apiNetworkHandler = AccountManagementPreviewNetwork();
 
   bool flagcalled = false;
+  String _searchQuery = '';
 
   String? paymentStatus;
   String? paymentVenderId;
@@ -94,224 +98,283 @@ class _GrnListingViewState extends State<GrnListingView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: Text(
-              '${widget.projectName!.toUpperCase()} - GOODS RECEIVED NOTE',
-              style:
-                  const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              Navigator.maybePop(context);
-            },
-          ),
-        ),
-        body: Container(
-          height: double.infinity,
-          color: Colors.white,
-          child: SafeArea(
-              child: flagcalled == true
-                  ? ListView.builder(
-                      itemCount: grnDetails!.length,
-                      itemBuilder: (context, index) {
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) {
-                                  return (useAccountManagementTestData
-                                      ? const AccountManagementPreviewDocumentScreen()
-                                      : PdfViewer(
-                                          fileName: grnDetails![index]
-                                              .grnFileName!
-                                              .toString(),
-                                          fileUrl:
-                                              '${AppUrl.globalGrnPath}${grnDetails![index].grnFileName!.toString()}',
-                                        ));
-                                },
-                              ),
+    final visibleGrns = (grnDetails ?? <GrnDetail>[]).where((item) => [
+      item.grnSrNo, item.bookingType, item.challan_no,
+      item.gradeName, item.grnCreatedDate,
+    ].any((value) => (value?.toString() ?? '').toLowerCase().contains(_searchQuery))).toList();
+    return AccountManagementSurface(
+        child: Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              title: Text(
+                  '${widget.projectName!.toUpperCase()} - GOODS RECEIVED NOTE',
+                  style: TextStyle(
+                      fontStyle: FontStyle.normal,
+                      fontSize: context.accountFont(17.0, mobile: 14))),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.maybePop(context);
+                },
+              ),
+            ),
+            body: Container(
+              height: double.infinity,
+              color: Colors.white,
+              child: SafeArea(
+                  child: Column(children: [
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: TextField(
+                        key: const ValueKey('grn-search'),
+                        onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
+                        decoration: InputDecoration(
+                          hintText: 'Search GRN, booking type, challan or grade',
+                          prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                          filled: true, fillColor: Colors.white, isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xffd0d4d8))),
+                        ),
+                      ),
+                    ),
+                    Expanded(child: flagcalled == true
+                      ? visibleGrns.isEmpty
+                        ? const Center(child: Text('No matching GRNs'))
+                        : ListView.builder(
+                          itemCount: visibleGrns.length,
+                          itemBuilder: (context, index) {
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) {
+                                      return (useAccountManagementTestData
+                                          ? const AccountManagementPreviewDocumentScreen()
+                                          : PdfViewer(
+                                              fileName: visibleGrns[index]
+                                                  .grnFileName!
+                                                  .toString(),
+                                              fileUrl:
+                                                  '${AppUrl.globalGrnPath}${visibleGrns[index].grnFileName!.toString()}',
+                                            ));
+                                    },
+                                  ),
+                                );
+                              },
+                              child: AccountCard(
+                                  child: ListTile(
+                                titleAlignment: ListTileTitleAlignment.center,
+                                trailing: const Icon(Icons.keyboard_arrow_right),
+                                title: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Padding(
+                                        padding: EdgeInsets.only(
+                                            left: (context.accountCompact
+                                                ? 12.0
+                                                : 50),
+                                            top: 10),
+                                        child: Column(
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: AccountDetailRow(
+                                                valueStart: 4,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 200,
+                                                    child: Text('GRN. No.',
+                                                        style: TextStyle(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile: 14),
+                                                            color:
+                                                                Colors.black)),
+                                                  ),
+                                                  horizontalSpaceMedium,
+                                                  const Center(
+                                                      child: Icon(Icons.remove,
+                                                          color:
+                                                              Colors.black54)),
+                                                  horizontalSpaceLarge,
+                                                  Text(
+                                                      visibleGrns[index]
+                                                          .grnSrNo!,
+                                                      style: TextStyle(
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          fontSize: context
+                                                              .accountFont(15,
+                                                                  mobile: 14),
+                                                          color: Colors.black)),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: AccountDetailRow(
+                                                valueStart: 4,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 200,
+                                                    child: Text('Booking Type',
+                                                        style: TextStyle(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile: 14),
+                                                            color:
+                                                                Colors.black)),
+                                                  ),
+                                                  horizontalSpaceMedium,
+                                                  const Center(
+                                                      child: Icon(Icons.remove,
+                                                          color:
+                                                              Colors.black54)),
+                                                  horizontalSpaceLarge,
+                                                  Text(
+                                                      visibleGrns[index]
+                                                          .bookingType!,
+                                                      style: TextStyle(
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          fontSize: context
+                                                              .accountFont(15,
+                                                                  mobile: 14),
+                                                          color: Colors.black)),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: AccountDetailRow(
+                                                valueStart: 4,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 200,
+                                                    child: Text('Challan No.',
+                                                        style: TextStyle(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile: 14),
+                                                            color:
+                                                                Colors.black)),
+                                                  ),
+                                                  horizontalSpaceMedium,
+                                                  const Center(
+                                                      child: Icon(Icons.remove,
+                                                          color:
+                                                              Colors.black54)),
+                                                  horizontalSpaceLarge,
+                                                  Text(
+                                                      visibleGrns[index]
+                                                          .challan_no!,
+                                                      style: TextStyle(
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          fontSize: context
+                                                              .accountFont(15,
+                                                                  mobile: 14),
+                                                          color: Colors.black)),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: AccountDetailRow(
+                                                valueStart: 4,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 200,
+                                                    child: Text('Grades',
+                                                        style: TextStyle(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile: 14),
+                                                            color:
+                                                                Colors.black)),
+                                                  ),
+                                                  horizontalSpaceMedium,
+                                                  const Center(
+                                                      child: Icon(Icons.remove,
+                                                          color:
+                                                              Colors.black54)),
+                                                  horizontalSpaceLarge,
+                                                  Text(
+                                                      visibleGrns[index]
+                                                          .gradeName!,
+                                                      style: TextStyle(
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          fontSize: context
+                                                              .accountFont(15,
+                                                                  mobile: 14),
+                                                          color: Colors.black)),
+                                                ],
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 10.0),
+                                              child: AccountDetailRow(
+                                                valueStart: 4,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 200,
+                                                    child: Text('Generated On',
+                                                        style: TextStyle(
+                                                            backgroundColor:
+                                                                Colors.white,
+                                                            fontSize: context
+                                                                .accountFont(15,
+                                                                    mobile: 14),
+                                                            color:
+                                                                Colors.black)),
+                                                  ),
+                                                  horizontalSpaceMedium,
+                                                  const Center(
+                                                      child: Icon(Icons.remove,
+                                                          color:
+                                                              Colors.black54)),
+                                                  horizontalSpaceLarge,
+                                                  Text(
+                                                      '${visibleGrns[index].grnCreatedDate!}',
+                                                      style: TextStyle(
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          fontSize: context
+                                                              .accountFont(15,
+                                                                  mobile: 14),
+                                                          color: Colors.black)),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        )),
+                                  ],
+                                ),
+                              )),
                             );
                           },
-                          child: ListTile(
-                            trailing: const Padding(
-                              padding: EdgeInsets.only(top: 70.0),
-                              child: Icon(Icons.keyboard_arrow_right),
-                            ),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 50, top: 10),
-                                    child: Column(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10.0),
-                                          child: Row(
-                                            children: [
-                                              const SizedBox(
-                                                width: 200,
-                                                child: Text('GRN. No.',
-                                                    style: TextStyle(
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        fontSize: 15,
-                                                        color: Colors.black)),
-                                              ),
-                                              horizontalSpaceMedium,
-                                              const Center(
-                                                  child: Icon(Icons.remove,
-                                                      color: Colors.black54)),
-                                              horizontalSpaceLarge,
-                                              Text(grnDetails![index].grnSrNo!,
-                                                  style: const TextStyle(
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      fontSize: 15,
-                                                      color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10.0),
-                                          child: Row(
-                                            children: [
-                                              const SizedBox(
-                                                width: 200,
-                                                child: Text('Booking Type',
-                                                    style: TextStyle(
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        fontSize: 15,
-                                                        color: Colors.black)),
-                                              ),
-                                              horizontalSpaceMedium,
-                                              const Center(
-                                                  child: Icon(Icons.remove,
-                                                      color: Colors.black54)),
-                                              horizontalSpaceLarge,
-                                              Text(
-                                                  grnDetails![index]
-                                                      .bookingType!,
-                                                  style: const TextStyle(
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      fontSize: 15,
-                                                      color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10.0),
-                                          child: Row(
-                                            children: [
-                                              const SizedBox(
-                                                width: 200,
-                                                child: Text('Challan No.',
-                                                    style: TextStyle(
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        fontSize: 15,
-                                                        color: Colors.black)),
-                                              ),
-                                              horizontalSpaceMedium,
-                                              const Center(
-                                                  child: Icon(Icons.remove,
-                                                      color: Colors.black54)),
-                                              horizontalSpaceLarge,
-                                              Text(
-                                                  grnDetails![index]
-                                                      .challan_no!,
-                                                  style: const TextStyle(
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      fontSize: 15,
-                                                      color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10.0),
-                                          child: Row(
-                                            children: [
-                                              const SizedBox(
-                                                width: 200,
-                                                child: Text('Grades',
-                                                    style: TextStyle(
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        fontSize: 15,
-                                                        color: Colors.black)),
-                                              ),
-                                              horizontalSpaceMedium,
-                                              const Center(
-                                                  child: Icon(Icons.remove,
-                                                      color: Colors.black54)),
-                                              horizontalSpaceLarge,
-                                              Text(
-                                                  grnDetails![index].gradeName!,
-                                                  style: const TextStyle(
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      fontSize: 15,
-                                                      color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10.0),
-                                          child: Row(
-                                            children: [
-                                              const SizedBox(
-                                                width: 200,
-                                                child: Text('Generated On',
-                                                    style: TextStyle(
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        fontSize: 15,
-                                                        color: Colors.black)),
-                                              ),
-                                              horizontalSpaceMedium,
-                                              const Center(
-                                                  child: Icon(Icons.remove,
-                                                      color: Colors.black54)),
-                                              horizontalSpaceLarge,
-                                              Text(
-                                                  '${grnDetails![index].grnCreatedDate!}',
-                                                  style: const TextStyle(
-                                                      backgroundColor:
-                                                          Colors.white,
-                                                      fontSize: 15,
-                                                      color: Colors.black)),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    )),
-                                verticalSpaceSmall15,
-                                const Divider(
-                                  height: 1,
-                                  thickness: 0.5,
-                                  color: Colors.black,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : const Center(child: CircularProgressIndicator())),
-        ));
+                        )
+                      : const AccountSkeleton()),
+                  ])),
+            )));
   }
 }

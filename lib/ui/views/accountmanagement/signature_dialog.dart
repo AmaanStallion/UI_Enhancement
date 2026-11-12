@@ -1,3 +1,6 @@
+import 'po_action_feedback.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview.dart';
 // import 'dart:typed_data';
 // import 'package:file_picker/file_picker.dart';
@@ -182,7 +185,7 @@ import 'package:stallion/ui/views/accountmanagement/account_management_preview.d
 //             Container(
 //               margin: const EdgeInsets.symmetric(horizontal: 16),
 //               decoration: BoxDecoration(border: Border.all()),
-//               height: 200,
+//               height: (MediaQuery.sizeOf(context).height * 0.3).clamp(120.0, 200.0),
 //               child: Signature(
 //                 controller: _controller,
 //                 backgroundColor: Colors.white,
@@ -349,7 +352,9 @@ class _SignatureDialogState extends State<SignatureDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      clipBehavior: Clip.antiAlias,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       backgroundColor: Colors.white,
       child: SizedBox(
         width: 500,
@@ -359,7 +364,7 @@ class _SignatureDialogState extends State<SignatureDialog> {
             // HEADER
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               color: Colors.black,
               child: const Text(
                 "SIGNATURE",
@@ -374,16 +379,18 @@ class _SignatureDialogState extends State<SignatureDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(12),
                     child: Text(
                       "Sign below",
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                          fontSize: context.accountFont(14, mobile: 14),
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   if (widget.flagRedirect != "Issued")
-                    TextButton(
+                    PoActionFeedback(
+                        child: TextButton(
                       onPressed: () {
                         setState(() {
                           _controller.clear();
@@ -393,9 +400,13 @@ class _SignatureDialogState extends State<SignatureDialog> {
                       child: Text(
                         "Clear",
                         style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600),
+                            color: Colors.blue,
+                            decoration: TextDecoration.underline,
+                            decorationColor: Colors.blue,
+                            fontSize: context.accountFont(14, mobile: 14),
+                            fontWeight: FontWeight.w600),
                       ),
-                    ),
+                    )),
                 ],
               ),
             ),
@@ -403,11 +414,17 @@ class _SignatureDialogState extends State<SignatureDialog> {
             // SIGNATURE / IMAGE VIEW
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              height: 200,
+              height:
+                  (MediaQuery.sizeOf(context).height * 0.3).clamp(120.0, 200.0),
               width: 450,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                border: Border.all(),
+                borderRadius: BorderRadius.circular(12),
                 color: Colors.white,
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black87, width: 1),
               ),
               child: widget.flagRedirect == "Issued"
                   ? (useAccountManagementTestData
@@ -445,38 +462,47 @@ class _SignatureDialogState extends State<SignatureDialog> {
             Row(
               children: [
                 Expanded(
-                  child: InkWell(
+                  child: PoActionFeedback(
+                      child: InkWell(
                     onTap: () => Navigator.pop(context),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      color: widget.flagRedirect == "Issued"
-                          ? Colors.grey
-                          : Colors.black,
+                      margin: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: Colors.black),
+                          color: Colors.white),
                       child: const Text(
                         "CLOSE",
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: Colors.black),
                       ),
                     ),
-                  ),
+                  )),
                 ),
                 const SizedBox(width: 1),
                 Expanded(
-                  child: InkWell(
-                    onTap:
-                        widget.flagRedirect == "Issued" ? null : _handleSubmit,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      color: widget.flagRedirect == "Issued"
-                          ? Colors.grey
-                          : Colors.black,
-                      child: const Text(
-                        "SUBMIT",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
+                  child: PoActionFeedback(
+                      enabled: widget.flagRedirect != 'Issued',
+                      child: InkWell(
+                        onTap: widget.flagRedirect == "Issued"
+                            ? null
+                            : _handleSubmit,
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              color: widget.flagRedirect == "Issued"
+                                  ? Colors.grey
+                                  : Colors.black),
+                          child: const Text(
+                            "SUBMIT",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      )),
                 ),
               ],
             ),

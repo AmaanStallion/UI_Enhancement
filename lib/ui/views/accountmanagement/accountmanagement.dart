@@ -556,12 +556,16 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                                       letterSpacing: 0.5,
                                       fontWeight: FontWeight.w700),
                                   textAlign: TextAlign.center))),
-                      const Divider(height: 1.0, color: Color(0xffe9ecef)),
+                      const Divider(height: 2, thickness: 2, color: Colors.black),
                       widget.navigationFlag != 'SideMenu'
                           ? towarLists?.length != 0
                               ? InkWell(
                                   onTap: _showTowerSelector,
-                                  child: Row(
+                                  child: Center(child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 2),
+                                    padding: const EdgeInsets.only(left: 12, right: 8),
+                                    child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(strTowarName?.toUpperCase() ?? '',
@@ -571,24 +575,25 @@ class _AccountManagementViewState extends State<AccountManagementView> {
                                               fontSize: context.accountFont(
                                                   13.0,
                                                   mobile: 13))),
-                                      horizontalSpaceSmall,
                                       IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints.tightFor(width: 24, height: 30),
+                                        style: IconButton.styleFrom(
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                                         icon: const Icon(Icons.arrow_drop_down,
                                             color: Colors.black),
                                         onPressed: _showTowerSelector,
                                         tooltip: 'Select tower',
                                       ),
                                     ],
-                                  ),
+                                  ))),
                                 )
                               : const SizedBox()
                           : const SizedBox(),
                       const Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        indent: 1,
-                        endIndent: 1,
-                        color: Color(0xffe9ecef),
+                        height: 2,
+                        thickness: 2,
+                        color: Colors.black,
                       ),
                       _statusSection(
                           isMobile,
@@ -814,7 +819,7 @@ class _AccountManagementViewState extends State<AccountManagementView> {
               style: TextStyle(
                 fontFamily: 'HelveticaNeue',
                 fontSize: isMobile ? 22 : 26,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w400,
                 color: Colors.black,
               ),
             ),

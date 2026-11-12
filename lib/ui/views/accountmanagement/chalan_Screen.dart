@@ -1,3 +1,6 @@
+import 'package:stallion/ui/views/accountmanagement/account_management_loading.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
+import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_document.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_preview_network.dart';
@@ -6,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stallion/models/get_chalan_list.dart';
-import 'package:stallion/ui/custom_loading/custom_loading.dart';
 import 'package:stallion/ui/views/constructionmanagementschedule/fancynode/pms_view/tree_tile.dart';
 import 'package:stallion/ui/views/mycontracts/imagepreviewview.dart';
 import 'package:stallion/ui/views/rccstructure/pdfviewer.dart';
@@ -36,7 +38,7 @@ class _ChalanScreenState extends State<ChalanScreen> {
   List<ChallanReportList>? challanReportList = [];
 
   Future<ChallanReportList?> fetchChallanList() async {
-    CustomLoading.progressDialog(isLoading: true, context: context);
+    AccountLoading.progressDialog(isLoading: true, context: context);
 
     final SharedPreferences prefs = await _prefs;
     String? userId = (prefs.getString('mobileNo') ??
@@ -57,7 +59,7 @@ class _ChalanScreenState extends State<ChalanScreen> {
       print(response.statusCode);
     }
     if (response.statusCode == 200 || response.statusCode == 201) {
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
 
       final dataModel = getChalanListFromJson(response.body);
 
@@ -67,7 +69,7 @@ class _ChalanScreenState extends State<ChalanScreen> {
         });
       }
     } else {
-      CustomLoading.progressDialog(isLoading: false, context: context);
+      AccountLoading.progressDialog(isLoading: false, context: context);
 
       if (kDebugMode) {
         print(response.body);
@@ -87,7 +89,8 @@ class _ChalanScreenState extends State<ChalanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AccountManagementSurface(
+        child: Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Colors.black,
@@ -97,18 +100,19 @@ class _ChalanScreenState extends State<ChalanScreen> {
             widget.towarName!.isNotEmpty
                 ? '${widget.projectName!.toUpperCase()} - ${widget.towarName!.toUpperCase()}'
                 : widget.projectName!.toUpperCase(),
-            style:
-                const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
+            style: TextStyle(
+                fontStyle: FontStyle.normal,
+                fontSize: context.accountFont(17.0, mobile: 14))),
       ),
       body: Column(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: const Center(
+            child: Center(
               child: Text(
                 "VIEW CHALLAN",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: context.accountFont(18, mobile: 14),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -121,7 +125,7 @@ class _ChalanScreenState extends State<ChalanScreen> {
                   left: 100, right: 100, bottom: 20, top: 10),
               decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: Colors.black12))),
-              child: Row(
+              child: AccountFlowRow(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -198,17 +202,17 @@ class _ChalanScreenState extends State<ChalanScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         "Remarks",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: context.accountFont(16, mobile: 14),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         challanReportList?[i].poChallanRemarks ?? '',
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: TextStyle(
+                          fontSize: context.accountFont(16, mobile: 14),
                           fontWeight: FontWeight.w600,
                         ),
                       )
@@ -219,8 +223,8 @@ class _ChalanScreenState extends State<ChalanScreen> {
                     DateFormat('dd MMM yyyy').format(
                         challanReportList?[i].poChallanCretatedAt ??
                             DateTime.now()),
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: TextStyle(
+                      fontSize: context.accountFont(16, mobile: 14),
                       fontWeight: FontWeight.w400,
                       color: Colors.black54,
                     ),
@@ -229,18 +233,18 @@ class _ChalanScreenState extends State<ChalanScreen> {
               ),
             ),
           if (challanReportList!.length == 0)
-            const Expanded(
+            Expanded(
                 child: Center(
               child: Text(
                 "No Record Found",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: context.accountFont(18, mobile: 14),
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ))
         ],
       ),
-    );
+    ));
   }
 }

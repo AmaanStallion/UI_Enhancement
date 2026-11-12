@@ -1,5 +1,26 @@
 import '../../../utils/app_url.dart';
 
+// Demonstration choices only; IDs are never used by the live integration.
+List<Map<String, dynamic>> assignedPoFilterSamples() => [
+  {'id': 'sample-vendors', 'name': 'Vendor', 'details': [
+    {'id': 'sample-v1', 'name': 'Sample Vendor'},
+    {'id': 'sample-v2', 'name': 'Metro Steel Supplies'},
+    {'id': 'sample-v3', 'name': 'Prime Cement Traders'},
+    {'id': 'sample-v4', 'name': 'Buildwell Materials'},
+  ]},
+  {'id': 'sample-materials', 'name': 'Booking Type', 'details': [
+    {'id': 'sample-m1', 'name': 'Steel FE500'},
+    {'id': 'sample-m2', 'name': 'Cement'},
+    {'id': 'sample-m3', 'name': 'RMC M25'},
+    {'id': 'sample-m4', 'name': 'Sand'},
+  ]},
+  {'id': 'sample-delivery', 'name': 'Delivery Status', 'details': [
+    {'id': 'sample-d1', 'name': 'Order Pending'},
+    {'id': 'sample-d2', 'name': 'Partially Delivered'},
+    {'id': 'sample-d3', 'name': 'Delivered'},
+  ]},
+];
+
 // Local fixtures matching the existing Account Management response models.
 Map<String, dynamic>? accountManagementFixture(String url) => {
       AppUrl.wspodetailsbystatus: {

@@ -1,4 +1,6 @@
 import 'po_action_feedback.dart';
+import 'po_assigned_filter_dialog.dart';
+import 'account_management_fixtures.dart' show assignedPoFilterSamples;
 import 'package:stallion/ui/views/accountmanagement/account_management_loading.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_style.dart';
 import 'package:stallion/ui/views/accountmanagement/account_management_layout.dart';
@@ -89,6 +91,14 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   }
 
   Future<FilterList?> getLeadFilter() async {
+    if (useAccountManagementTestData &&
+        ['Assigned', 'Issued'].contains(args.response?.flagRedirect)) {
+      setState(() {
+        filterListData = assignedPoFilterSamples()
+            .map((group) => sales_lead_filter.FilterList.fromJson(group)).toList();
+      });
+      return null;
+    }
     final SharedPreferences prefs = await _prefs;
     String? userId = (prefs.getString('mobileNo') ??
         (useAccountManagementTestData ? '1' : null));
@@ -111,6 +121,38 @@ class _PoRequestedViewState extends State<PoRequestedView> {
       }
     }
     return null;
+  }
+
+  void _showAssignedFilters() {
+    showAccountDialog(context: context, builder: (dialogContext) =>
+      PoAssignedFilterDialog(groups: filterListData ?? [],
+        isPreview: useAccountManagementTestData,
+        onReset: () {
+          for (final group in filterListData ?? <sales_lead_filter.FilterList>[]) {
+            group.ct = 0;
+            for (final detail in group.details ?? <sales_lead_filter.Detail>[]) {
+              detail.isSelected = false;
+            }
+          }
+          searchController.clear();
+          setState(() {
+            offset = '0'; searchTermValue = ''; searchText = '';
+            rccBookingHistory = []; filteredList = []; woOrderList = [];
+          });
+          fetchProjectPoRequested();
+        },
+        onApply: () {
+          filteredList = [for (final group in filterListData ?? <sales_lead_filter.FilterList>[])
+            sales_lead_filter.FilterList(name: group.name, id: group.id,
+              details: (group.details ?? <sales_lead_filter.Detail>[])
+                .where((detail) => detail.isSelected == true).toList())];
+          setState(() {
+            offset = '0'; searchTermValue = ''; woOrderList = []; rccBookingHistory = [];
+          });
+          fetchProjectPoRequested().then((_) {
+            if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+          });
+        }));
   }
 
   Future<List<poDeliveryDetailss.OrderDetail>?> getOrderDetails(
@@ -263,6 +305,14 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     }
     if (response.statusCode == 200 || response.statusCode == 201) {
       final dataModel = getPoDetailsByStatusFromJson(response.body);
+      // UI demonstration only: expose Issued's existing conditional actions.
+      if (useAccountManagementTestData && _isIssued) {
+        final samples = dataModel.response?.rccBookingHistory ?? <RccBookingHistory>[];
+        for (var i = 0; i < samples.length; i++) {
+          samples[i].poStatus = '2';
+          samples[i].grn_active = i == 0 ? '1' : '0';
+        }
+      }
       if (kDebugMode) {
         print(dataModel.response?.errorCode);
       }
@@ -400,7 +450,12 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                 if (args.response?.flagRedirect != 'Verified' &&
                     args.response?.assignToId == '')
                   InkWell(
+                    key: const ValueKey('po-list-filter'),
                     onTap: () {
+                      if (['Assigned', 'Issued'].contains(args.response?.flagRedirect)) {
+                        _showAssignedFilters();
+                        return;
+                      }
                       searchController.clear();
                       setState(() {
                         searchText = '';
@@ -925,7 +980,14 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                           });
                     },
                     child: Container(
-                      child: filteredList?.length != 0
+                      child: ['Assigned', 'Issued'].contains(args.response?.flagRedirect)
+                          ? SizedBox(width: 40, height: 40,
+                              child: Icon(Icons.filter_alt_outlined,
+                                color: (filteredList ?? []).any((group) =>
+                                  (group.details ?? []).isNotEmpty)
+                                    ? Colors.amber.shade200 : Colors.white,
+                                size: 23))
+                          : filteredList?.length != 0
                           ? Container(
                               color: Colors.white,
                               padding: const EdgeInsets.all(4),
@@ -1051,7 +1113,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
 //                           ),
 //                         ),
                       verticalSpaceSmall,
-                      if (args.response?.flagRedirect != 'Verified')
+                      if (!_hasCollapsiblePoCards)
                       const Divider(
                         height: 0.5,
                         thickness: 0.5,
@@ -1623,7 +1685,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                         context.accountCompact
                                                             ? 12
                                                             : 20,
-                                                    vertical: args.response?.flagRedirect == 'Verified' ? 0 : 12),
+                                                    vertical: _hasCollapsiblePoCards ? 0 : 12),
                                             trailing: _matchesLegacyMobileLayout ||
                                                     (context.accountCompact &&
                                                         (args.response
@@ -1646,7 +1708,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                     .accountCompact
                                                                 ? 0
                                                                 : 12,
-                                                            top: args.response?.flagRedirect == 'Verified' ? 0 : 8),
+                                                            top: _hasCollapsiblePoCards ? 0 : 8),
                                                         child: Column(
                                                           children: [
                                                             Padding(
@@ -2000,7 +2062,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                                               : rccBookingHistory![index].poStatus! == '3'
                                                                                                   ? 'Dispute'
                                                                                                   : '---',
-                                                                                  style: args.response?.flagRedirect == 'Verified'
+                                                                                  style: _hasCollapsiblePoCards
                                                                                       ? _poStrongStyle
                                                                                       : rccBookingHistory![index].poStatus! == '0'
                                                                                       ? _poBodyStyle
@@ -2293,9 +2355,9 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                           child: Text(
                                                                               rccBookingHistory![index].poApproveBy!,
                                                                               style: rccBookingHistory![index].poApproveBy! != ''
-                                                                                  ? TextStyle(fontWeight: FontWeight.bold, fontSize: context.accountFont(14.0, mobile: 14), color: args.response?.flagRedirect == 'Verified' ? Colors.black87 : Colors.white)
+                                                                                  ? TextStyle(fontWeight: FontWeight.bold, fontSize: context.accountFont(14.0, mobile: 14), color: _hasCollapsiblePoCards ? Colors.black87 : Colors.white)
                                                                                   : rccBookingHistory![index].poApproveBy! != '---'
-                                                                                      ? TextStyle(fontWeight: FontWeight.bold, fontSize: context.accountFont(14.0, mobile: 14), color: args.response?.flagRedirect == 'Verified' ? Colors.black87 : Colors.white)
+                                                                                      ? TextStyle(fontWeight: FontWeight.bold, fontSize: context.accountFont(14.0, mobile: 14), color: _hasCollapsiblePoCards ? Colors.black87 : Colors.white)
                                                                                       : _poStrongStyle),
                                                                         ),
                                                                       ],
@@ -2610,7 +2672,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                                       : rccBookingHistory![index].orderStatus! == '4'
                                                                                           ? 'Partially Delivered'
                                                                                           : 'Order Cancelled',
-                                                                          style: args.response?.flagRedirect == 'Verified'
+                                                                          style: _hasCollapsiblePoCards
                                                                               ? _poStrongStyle
                                                                               : rccBookingHistory![index].orderStatus! == '0'
                                                                               ? _poStrongStyle
@@ -2957,7 +3019,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                                                                     : const SizedBox(),
                                                           ],
                                                         )),
-                                                    if (args.response?.flagRedirect != 'Verified') ...[
+                                                    if (!_hasCollapsiblePoCards) ...[
                                                     verticalSpaceSmall15,
                                                     const Divider(
                                                       height: 1,
@@ -2982,9 +3044,15 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   // Kept in the screen state so independently expanded cards survive recycling.
   final Set<String> _expandedPoRequests = {};
 
+  bool get _hasCollapsiblePoCards =>
+      ['Verified', 'Assigned', 'Issued'].contains(args.response?.flagRedirect);
+
+  String _poCardId(RccBookingHistory order) =>
+      '${_isIssued ? 'issued/' : args.response?.flagRedirect == 'Assigned' ? 'assigned/' : ''}${order.projectIdFk}/${order.towarIdFk}/${order.orderId ?? order.poNo}';
+
   Widget _requestCard(RccBookingHistory order, {required Widget child}) {
-    if (args.response?.flagRedirect != 'Verified') return child;
-    final id = '${order.projectIdFk}/${order.towarIdFk}/${order.orderId ?? order.poNo}';
+    if (!_hasCollapsiblePoCards) return child;
+    final id = _poCardId(order);
     final expanded = _expandedPoRequests.contains(id);
     if (expanded) return child;
     String display(String? value) => value == null || value.trim().isEmpty ? '—' : value;
@@ -3006,15 +3074,18 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     };
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _openRequestPo(order),
+      onTap: args.response?.flagRedirect != 'Verified'
+          ? (child is InkWell ? child.onTap : null)
+          : () => _openRequestPo(order),
       child: Column(
       key: ValueKey('po-request-card-$id'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
+          height: _isIssued ? 190 : null,
           margin: EdgeInsets.fromLTRB(context.accountCompact ? 12 : 24, 8,
               context.accountCompact ? 12 : 24, 8),
-          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+          padding: EdgeInsets.fromLTRB(14, _isIssued ? 5 : 12, 6, _isIssued ? 5 : 12),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
@@ -3030,11 +3101,13 @@ class _PoRequestedViewState extends State<PoRequestedView> {
             ],
           ),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: Column(
+            Expanded(child: _collapsedPoDetails(Column(
+              mainAxisAlignment: _isIssued ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                       for (final field in fields.entries)
-                        Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(
+                        Padding(padding: EdgeInsets.only(
+                            bottom: _isIssued && field.key == 'Delivery status' ? 0 : 8), child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(flex: 4, child: Text(field.key,
@@ -3063,18 +3136,40 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                             )),
                           ],
                         )),
-                    ])),
+                    ]))),
             const SizedBox(width: 8),
             Column(mainAxisSize: MainAxisSize.min, children: [
               _requestToggle(order),
               const SizedBox(height: 4),
+              if (_isIssued) ...[
+                _issuedCardButton('Del. Qty.', () {
+                  getOrderDetails(orderId: order.orderId ?? '').then((_) => viewDelQty());
+                }),
+                const SizedBox(height: 6),
+                _issuedCardButton('Challan', () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => ChalanScreen(
+                    orderId: order.orderId, projectId: args.projectId,
+                    towarId: args.response?.towarId, projectName: args.projectName,
+                    towarName: args.towarName)))),
+                const SizedBox(height: 6),
+              ],
               _viewDocumentsButton(order, compact: context.accountCompact),
+              if (args.response?.flagRedirect == 'Assigned') ...[
+                const SizedBox(height: 8),
+                _assignedSignatureButton(order, enabled: order.authorizeFlag == '1'),
+              ],
             ]),
           ]),
         ),
       ],
     ));
   }
+
+  Widget _collapsedPoDetails(Widget child) =>
+      _isIssued ? LayoutBuilder(builder: (_, constraints) =>
+          SingleChildScrollView(child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: child))) : child;
 
   Future<void> _openRequestPo(RccBookingHistory order) async {
     await Navigator.push(context, MaterialPageRoute(
@@ -3097,7 +3192,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   }
 
   Color _requestBadgeFill(Color color) {
-    if (args.response?.flagRedirect != 'Verified' || color == Colors.transparent) return color;
+    if (!_hasCollapsiblePoCards || color == Colors.transparent) return color;
     final opacity = color == const Color(0xffffd633)
         ? 0.34
         : color == const Color(0xff007acc)
@@ -3107,15 +3202,15 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   }
 
   Widget _requestToggle(RccBookingHistory order) {
-    final id = '${order.projectIdFk}/${order.towarIdFk}/${order.orderId ?? order.poNo}';
+    final id = _poCardId(order);
     final expanded = _expandedPoRequests.contains(id);
     return IconButton(
       key: ValueKey('po-request-toggle-$id'),
       tooltip: expanded ? 'Collapse PO ${order.poNo}' : 'Expand PO ${order.poNo}',
       isSelected: expanded,
-      constraints: expanded ? const BoxConstraints.tightFor(width: 40, height: 32) : null,
-      padding: expanded ? EdgeInsets.zero : null,
-      style: expanded ? IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap) : null,
+      constraints: expanded || _isIssued ? BoxConstraints.tightFor(width: 40, height: _isIssued && !expanded ? 24 : 32) : null,
+      padding: expanded || _isIssued ? EdgeInsets.zero : null,
+      style: expanded || _isIssued ? IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap) : null,
       onPressed: () => setState(() {
         if (expanded) {
           _expandedPoRequests.remove(id);
@@ -3128,7 +3223,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
   }
 
   Widget _requestExpandedContent(RccBookingHistory order, {required Widget child}) {
-    if (args.response?.flagRedirect != 'Verified') return child;
+    if (!_hasCollapsiblePoCards) return child;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: EdgeInsets.only(right: context.accountCompact ? 20 : 24),
@@ -3203,7 +3298,7 @@ class _PoRequestedViewState extends State<PoRequestedView> {
               onTap: onTap,
               borderRadius: BorderRadius.circular(24),
               child: Container(
-                width: 68,
+                width: context.accountCompact ? 68 : 108,
                 padding: const EdgeInsets.symmetric(vertical: 5),
                 decoration: BoxDecoration(
                     border: Border.all(color: Colors.black54),
@@ -3214,11 +3309,12 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                         fontSize: context.accountFont(14, mobile: 11.5))),
               )));
 
-  Widget _assignedSignatureButton(RccBookingHistory order) {
+  Widget _assignedSignatureButton(RccBookingHistory order, {bool enabled = true}) {
     return PoActionFeedback(
+        enabled: enabled,
         child: InkWell(
       borderRadius: BorderRadius.circular(24),
-      onTap: () async {
+      onTap: enabled ? () async {
         await showAccountDialog(
             context: context,
             builder: (_) => SignatureDialog(
@@ -3241,18 +3337,20 @@ class _PoRequestedViewState extends State<PoRequestedView> {
           offset = '0';
           searchTermValue = '';
           woOrderList = [];
+          rccBookingHistory = [];
         });
         fetchProjectPoRequested();
-      },
+      } : null,
       child: Container(
         width: context.accountCompact ? 68 : 108,
         padding: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
-            border: Border.all(color: Colors.black54),
+            border: Border.all(color: enabled ? Colors.black54 : Colors.black26),
             borderRadius: BorderRadius.circular(24)),
         child: Text('E-Sign',
             textAlign: TextAlign.center,
             style: TextStyle(
+                color: enabled ? Colors.black87 : Colors.black38,
                 fontSize: context.accountFont(14, mobile: 11.5),
                 fontWeight: FontWeight.w600)),
       ),
@@ -3293,11 +3391,12 @@ class _PoRequestedViewState extends State<PoRequestedView> {
       {bool trailing = false}) {
     if (hint == 'Select From Date' || hint == 'Select To Date') {
       final decoration = accountDateInputDecoration(context, hint);
-      if (args.response?.flagRedirect != 'Verified') return decoration;
+      if (!_hasCollapsiblePoCards) return decoration;
       return decoration.copyWith(
-        constraints: BoxConstraints(minHeight: context.accountCompact ? 32 : 36),
+        constraints: BoxConstraints(minHeight: context.accountCompact ? 32 : 44),
         contentPadding: EdgeInsets.symmetric(
-            horizontal: context.accountCompact ? 6 : 14, vertical: 8),
+            horizontal: context.accountCompact ? 6 : 14,
+            vertical: context.accountCompact ? 8 : 12),
       );
     }
     const border = OutlineInputBorder(
@@ -3918,15 +4017,15 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.black,
                   minimumSize: Size(context.accountCompact ? 0 : 88,
-                      args.response?.flagRedirect == 'Verified'
+                      _hasCollapsiblePoCards
                           ? (context.accountCompact ? 32 : 36) : 44),
-                  tapTargetSize: args.response?.flagRedirect == 'Verified'
+                  tapTargetSize: _hasCollapsiblePoCards
                       ? MaterialTapTargetSize.shrinkWrap : null,
                   shape: const StadiumBorder(),
                   side: const BorderSide(width: 1.0, color: Colors.black45),
                   padding: EdgeInsets.symmetric(
                       horizontal: context.accountCompact ? 6 : 20,
-                      vertical: args.response?.flagRedirect == 'Verified'
+                      vertical: _hasCollapsiblePoCards
                           ? (context.accountCompact ? 6 : 8) : 12),
                 ),
                 child: Text('Submit',
@@ -3951,15 +4050,15 @@ class _PoRequestedViewState extends State<PoRequestedView> {
                 },
                 style: OutlinedButton.styleFrom(
                   minimumSize: Size(context.accountCompact ? 0 : 88,
-                      args.response?.flagRedirect == 'Verified'
+                      _hasCollapsiblePoCards
                           ? (context.accountCompact ? 32 : 36) : 44),
-                  tapTargetSize: args.response?.flagRedirect == 'Verified'
+                  tapTargetSize: _hasCollapsiblePoCards
                       ? MaterialTapTargetSize.shrinkWrap : null,
                   shape: const StadiumBorder(),
                   side: const BorderSide(width: 1.0, color: Colors.black45),
                   padding: EdgeInsets.symmetric(
                       horizontal: context.accountCompact ? 6 : 20,
-                      vertical: args.response?.flagRedirect == 'Verified'
+                      vertical: _hasCollapsiblePoCards
                           ? (context.accountCompact ? 6 : 8) : 12),
                 ),
                 child: Text('Reset',
@@ -4034,8 +4133,8 @@ class _PoRequestedViewState extends State<PoRequestedView> {
               )),
             ],
             content: SizedBox(
-              height: 320,
-              width: 400,
+              height: _isIssued ? (MediaQuery.sizeOf(context).height * .45).clamp(160.0, 360.0) : 320,
+              width: _isIssued ? 460 : 400,
               child: SingleChildScrollView(
                 child: Wrap(
                   direction: Axis.horizontal, // default
@@ -4194,8 +4293,10 @@ class _PoRequestedViewState extends State<PoRequestedView> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: heading ? const Color(0xfff1f3f5) : Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xffe9ecef))),
+        color: heading ? const Color(0xffe9ecef) :
+            _isIssued ? const Color(0xfff5f5f5) : Colors.white,
+        border: _isIssued ? null :
+            const Border(bottom: BorderSide(color: Color(0xffe9ecef))),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         for (var i = 0; i < values.length; i++)

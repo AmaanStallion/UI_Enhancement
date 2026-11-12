@@ -1,6 +1,185 @@
-# UI handover — first batch review
+# UI handover — delivery record and current batch
 
-Reviewed: 2026-11-05 (Asia/Calcutta).
+Reviewed: 2026-11-12 (Asia/Calcutta).
+
+## Authorized follow-up delivery record — 2026-11-12
+
+- The user explicitly authorized committing and pushing the reviewed 12-file handover to `codex/ui-po-verified-handover` in `https://github.com/AmaanStallion/UI_Enhancement`, keeping unrelated changes out. The exact delivery hash, verified push outcome and comparison link are reported in chat after publication; the commit containing this record is the delivery identifier.
+- Previous handover baseline: `50bc6c792741e1464d9744afce792c0013ff8005`. Scope/file manifest and integration instructions: `docs/ui_po_followup_handover.md`. Source/test hashes matched the isolated tested candidate immediately before staging; only these delivery-status notes were updated for authorization. Nineteen excluded local files were integrity-hashed for preservation verification.
+- Nine focused offline tests passed in the isolated previous-commit-plus-candidate copy at mobile/desktop sizes. No new backend requests, preview configuration changes, Git remote changes, history replacement or dependency/build changes are part of publication.
+
+## Follow-up handover comparison review — 2026-11-12
+
+- Previous delivered comparison baseline: `50bc6c792741e1464d9744afce792c0013ff8005`. Current branch remains `codex/ui-po-verified-handover`, origin `https://github.com/AmaanStallion/UI_Enhancement.git`. Integration developer's imported hash is not yet confirmed. No new commit/push or Git configuration change was made.
+- Concrete proposed batch: 12 files listed in `docs/ui_po_followup_handover.md`, including that new guide, this record, seven existing UI/fixture files, the new filter presentation and two new focused tests. Scope: main-screen/Verify PO refinements, Assigned/Issued cards/toolbars/filter, signature pad and related GRN/Challan UI. No renames/deletions or new assets/fonts/dependencies/platform configuration. All final behaviours, public interface changes, existing data/actions, API-containing files touched and preview limitations are recorded in that guide; earlier chronological entries below are superseded where they describe intermediate designs.
+- Signature/GRN include their reviewed earlier local presentation changes previously excluded from the first delivery. The initial isolated 11-file candidate failed opening the old Challan layout on mobile (548-pixel overflow); adding `chalan_Screen.dart`'s existing responsive presentation/loading changes establishes the 12-file candidate. Other pre-existing dirty screens, broad preview test edits, local guidance/images and generated output are excluded. Preserve them locally.
+- Validation: separate copy of the previous commit plus only the candidate files passed all nine focused offline tests (390/1920) using existing resolved dependencies with `--no-pub`; no unrelated dirty sources were copied. Whitespace checks and narrow credential-pattern scan passed. Primary screen `AppUrl` sequences are unchanged; GRN fetch/signature submission bodies are unchanged, and Challan's fetch only changes its loading wrapper. No backend request, screenshot acceptance, native upload, fresh dependency resolution or release build validation was performed.
+- This is a prepared, reviewable candidate, not a completed handover. Commit/push requires explicit authorization. After publication report the exact new hash and use it for the integration developer's next comparison baseline.
+
+## Next UI batch: collapsed Issued vertical breathing room — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Increased collapsed Issued top/bottom padding from 2 to 5 logical pixels and the shared fixed height from 184 to 190 to preserve available content space. Three-button gaps remain 6 pixels; horizontal layout, equal card sizes, action handlers and expanded/other-state cards are unchanged.
+- No public interfaces, API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: source review and whitespace check for this padding-only change; existing content space matches the previously tested layout. No new runtime/screenshots/live backend checks.
+
+## Next UI batch: collapsed Issued Delivery Status bottom spacing — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Removed the final 8-pixel padding below Delivery Status and distributed short summary rows over the available left-column height so the final row sits near the bottom content edge. Long summaries retain internal scrolling. The shared 184-pixel height and all three action buttons' existing 6-pixel gaps, dimensions, ordering and handlers remain unchanged. Other PO states and expanded cards are unchanged.
+- No public interfaces, API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: both offline Issued checks passed at widths 390 and 1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: separated collapsed Issued actions — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Increased gaps between Del. Qty., Challan and View Doc from 1 to 6 logical pixels on collapsed Issued cards. Increased the shared fixed height from 174 to 184 to accommodate the added spacing without clipping buttons. Button sizes, order, alignment and callbacks, compact outer padding and expanded layouts are unchanged.
+- No public interfaces, API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: both offline Issued checks passed at widths 390 and 1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: tighter Issued collapsed spacing — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Reduced the common collapsed Issued height from 188 to 174 logical pixels, vertical padding from 6 to 2, action gaps from 2 to 1, and collapsed arrow height from 28 to 24. Three action buttons retain their dimensions/order/handlers and remain visible. Long left-column content still scrolls internally; expanded/other-state cards are unchanged.
+- No public interfaces, API/data/integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: both offline Issued checks passed at widths 390 and 1920; whitespace check passed. No screenshots/live backend calls.
+
+## Next UI batch: further compact Issued collapsed cards — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Reduced the common fixed collapsed Issued height from 216 to 188 logical pixels, vertical padding from 12 to 6, gaps between its three actions from 8 to 2, and collapsed arrow control height from 32 to 28. Button dimensions, order and callbacks remain unchanged; all three remain visible. Left details retain internal scrolling for longer content. Expanded cards and other PO states retain their sizing.
+- No public interface, API/data, integration, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: both offline Issued checks passed at widths 390 and 1920, including equal heights and actions/navigation; whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: shorter fixed Issued collapsed cards — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. Reduced the fixed collapsed Issued card height from 244 to 216 logical pixels on mobile/desktop. Its arrow uses the existing expanded-arrow 40×32 compact dimensions to remove extra control space while keeping the three action buttons fully visible in their existing order/grouping. All Issued collapsed cards keep the same height; longer left-column details retain internal scrolling. Expanded cards and other PO states are unchanged.
+- No public interfaces, API/data, integration requirements, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Comparison baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: initial height-only reductions overflowed the action column; compacting the arrow resolved this. Both offline Issued checks passed at widths 390 and 1920, covering equal card heights and action visibility/navigation; whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: Issued collapsed actions and GRN search — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `lib/ui/views/accountmanagement/grnlistingview.dart`, `test/po_issued_cards_test.dart`, Issued expectations in the already-dirty `test/account_management_preview_test.dart`, and this record. No added/deleted/renamed files.
+- Collapsed Issued cards show only Del. Qty., Challan and View Doc below the arrow, preserving that order and existing action handlers. View GRN and authorized E-Sign remain in their existing expanded-card positions. Collapsed Issued card containers have a fixed 244-pixel height on mobile/desktop; longer details can scroll within the left column without resizing the card. Verified/Assigned layouts are unchanged.
+- GRN screen adds a white search field above its list, filtering loaded records locally by GRN number, booking type, challan number, grade or generated date, with an empty-result message. Clearing the query restores the loaded list; card taps open the filtered record's existing document. No search API requests/payload changes or new integration requirements.
+- No public interface, auth/permission/business-rule changes, assets/fonts/dependencies/platform changes. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Broad preview-test changes must be selected separately from unrelated existing edits for a future handover.
+- Validation: initial compile check found date fields needed string conversion in search; corrected. Both focused offline Issued checks passed at 390/1920, including equal collapsed heights, three collapsed actions, expanded-only actions and GRN search empty/clear states. Final focused/broad Issued run passed all four selected tests with the scroll layout; diff whitespace check passed. No live backend or screenshot review.
+
+## Next UI batch: shorter tower row — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/accountmanagement.dart` and this record. Reduced the tower selector's vertical margins from 4 to 2 pixels and arrow control height from 36 to 30, reducing the row by 10 pixels. Centered name/arrow grouping, full-width borders, text size and selector callbacks are retained on mobile/desktop.
+- No public interface, API/data, integration, assets/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: source review and diff whitespace check only for this sizing change; no runtime/screenshots/backend checks.
+
+## Correction: full-width tower row borders — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/accountmanagement.dart` and this record. Removed the rounded border around the tower name/arrow. Instead, the full-width separators below the Account Management title and below the tower row use 2-pixel black lines. Retained the close, centered tower/arrow grouping and selector callbacks. This supersedes the bordered-selector entry below.
+- No API/data, public interface, assets/dependencies or integration changes. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: source review and diff whitespace check for this border-only correction; no runtime/screenshots/backend checks.
+
+## Next UI batch: bordered tower selector — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/accountmanagement.dart` and this record. Kept the tower name/arrow group centered, removed the explicit gap, and reduced the arrow's horizontal layout space to 24 pixels with a shrink-wrapped tap target. Added a 2-pixel black rounded border around the selector with internal padding. Existing tower selector callbacks, ordering and data remain unchanged on mobile/desktop.
+- No public interfaces, API/integration requirements, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: both offline main-screen checks passed at widths 390 and 1920; whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: Account Management count/tower styling — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/accountmanagement.dart` and this record. PO/WO/Payment status tile counts now use regular weight (400 instead of 700), retaining their sizes and values. Tower name and arrow form one centered group with a 2-pixel gap and a narrower 28-pixel arrow control; existing row/control height and selector callback are retained on mobile/desktop.
+- No public interfaces, API/data/actions, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Comparison baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: both offline main-screen/skeleton checks passed at widths 390 and 1920; whitespace check passed. No live backend calls or screenshot review.
+
+## Correction: mobile Requirement Type text layout — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Requirement Type's disabled display field uses dense decoration on Verify PO and a center-left alignment wrapper, allowing its natural text height to fit inside the compact field instead of the default input-decoration minimum height. Text remains left-aligned; field/arrow dimensions, callbacks and data are unchanged.
+- No new public interface, API, assets/dependencies or integration requirements. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: all four offline Verify PO regression checks passed at widths 390 and 1920; whitespace check passed. No visual screenshot review or live backend calls.
+
+## Correction: Requirement Type vertical centering — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Restored Requirement Type text to left alignment and removed the added left clearance. Retained vertical centering and the new dropdown arrow. This supersedes the horizontal-centering description below; field dimensions, position and selection behaviour are unchanged.
+- No public interface, API/data, assets/dependencies or integration changes. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: source review and diff whitespace check only for this alignment correction; no backend requests.
+
+## Next UI batch: Verify PO dropdown arrows and text alignment — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Requirement Type and Quantity's unit selector now use a downward chevron arrow on Verify PO, including preview and live unit-selector rendering. Requirement Type text is centered horizontally/vertically with equal left/right clearance for the trailing arrow. Field dimensions and positions, popup handlers and selection data remain unchanged. Other detail modes retain their triangle icons and text alignment.
+- No public interfaces, API/data/actions, permissions, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Comparison baseline `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: all four offline Verify PO checks passed at widths 390 and 1920; whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: shorter Verify PO View PO button — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Reduced Verify PO's View PO vertical padding from 5 to 3 logical pixels (4 pixels less overall height) on mobile/desktop. Horizontal padding, text size, position, grouping and document navigation are unchanged. Other PO detail modes retain their original padding.
+- No public interfaces, API/data/actions, assets/fonts/dependencies/platform changes or added/deleted/renamed files. Baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: source review and diff whitespace check; no runtime, screenshot or backend checks for this padding-only change.
+
+## Next UI batch: Verify PO single-line labels — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. All Verify PO form labels now use one line except Description / Sub type, which retains two lines. Existing scale-down fitting keeps labels within their current columns; input widths, positions, heights and button layout are unchanged on mobile/desktop. Other PO detail modes are unchanged.
+- No public interface, data/action, API, permission, assets/fonts/dependencies/platform changes, or added/deleted/renamed files. Comparison baseline remains `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: all four existing offline Verify PO checks passed at widths 390 and 1920; whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: Verify PO remarks/upload alignment — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Other Remarks and Upload now share the material input cards' horizontal content inset (20 compact / 48 desktop) and existing label/control grid. Removed extra internal remarks padding so its field edges align with the inputs above. Upload's existing control/attachment row now sits alongside its label, aligned to the input column; controls retain their internal order and callbacks. Footer buttons remain in place. Other detail modes retain their layout.
+- Extracted existing upload row into private `_uploadControls()`; no public interface, API, permissions, data, integration requirement, assets/fonts/dependencies/platform changes or file renames/additions/deletions.
+- Baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Validation: all four offline Verify PO checks passed at widths 390 and 1920; diff whitespace check passed. No live backend calls, native file-picker invocation or screenshot review.
+
+## Next UI batch: Verify PO form order and card finish — 2026-11-12
+
+- Changed `lib/ui/views/accountmanagement/podetails.dart` and this record. Verify PO now places the existing two-line Other Remarks field above Upload and its document controls. Existing field widths, labels, upload controls, attachment actions and footer button positions/order/grouping are preserved. Other PO detail modes retain their existing order.
+- Verify PO's material input cards use a lighter border and a subtle shadow. Other modes retain their prior decoration. Extracted the existing remarks widget into private `_otherRemarksField()` for reuse without changing controllers, editability, callbacks, permissions or data flow.
+- No added/deleted/renamed files, public widget interface, API-related changes, new data/actions, assets/fonts/dependencies or platform configuration. Comparison baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed.
+- Validation: diff whitespace check passed; all four offline Verify PO regression checks passed at widths 390 and 1920, including navigation and form editing. No live backend calls or screenshot review.
+
+## Next UI batch: View GRN card cleanup — 2026-11-06
+
+- Changed `lib/ui/views/accountmanagement/grnlistingview.dart` and this record; preserved the screen's pre-existing changes. Removed the divider and its spacer below each card's content. Removed the arrow's fixed 70-pixel top padding and centered the trailing arrow vertically against the card details on mobile and desktop.
+- Card tap/document navigation, data, permissions and button placement remain unchanged. No added/deleted/renamed files, public interfaces, integration requirements, API changes, assets/fonts/dependencies or platform changes.
+- Comparison baseline: last delivered `50bc6c792741e1464d9744afce792c0013ff8005`. Uncommitted/unpushed. Validation: both offline Issued-to-GRN checks passed at widths 390 and 1920; diff whitespace check passed. No live backend requests or screenshot review.
+
+## Next UI batch: PO Status / Issued parity — 2026-11-06
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, added `test/po_issued_cards_test.dart`, updated Issued expectations in the already-dirty `test/account_management_preview_test.dart`, and updated this record. No renames/deletions, new assets/fonts/dependencies/platform configuration or public widget interfaces.
+- Issued now starts with the same five-row collapsed summary and raised-card/pastel-badge treatment as Verified/Assigned. Only the arrow expands/collapses; body taps retain the existing Issued navigation handler. Collapsed actions preserve Issued's existing sequence: Del. Qty., conditional View GRN, View Challan, View Doc, and authorized E-Sign. Expanded button positions/grouping remain unchanged. Separate Issued expansion keys prevent state collisions.
+- Expanded details use the reduced top padding and remain below a dedicated arrow row. Removed the divider/spacer below Grades. Applied the existing compact Filter/date/Submit/Reset toolbar, desktop date alignment, and removed the divider below the search bar.
+- Issued reuses the new responsive filter popup/icon, black header, grey choices, white search and side-by-side capsule actions. Live filter data/payloads and refresh callbacks remain unchanged. Delivery quantity popup uses grey table rows without row rules; document popup now has viewport-adaptive height and a bounded desktop width. Existing black-header/capsule-action signature and document dialogs are retained; GRN and Challan continue to open their existing screens.
+- Demonstration only: Issued preview rows display Issued status and the first enables the existing GRN action; preview filter categories reuse sample Vendor/Booking Type/Delivery Status. Authorization remains as supplied by fixtures/live data. Preview selections demonstrate popup interaction without filtering the static fixture rows. No endpoint, auth, token, request-payload or backend business-rule changes, and no new integration requirements.
+- Comparison baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`; uncommitted/unpushed. Tests in the broad preview file contain unrelated changes and must be selected separately for any future commit.
+- Validation: the eight-test network-blocked Issued/Assigned/Verified suite passed at widths 390 and 1920. The final two Issued checks also passed, including GRN/Challan navigation, delivery/document/signature dialogs, action isolation, expansion and filter selection/apply. The existing broad Issued regression passed, including toolbar alignment. Diff whitespace check passed. No live backend calls or screenshot review.
+
+## Next UI batch: E-Signed filter popup — 2026-11-06
+
+- Changed `porequested.dart`, `account_management_fixtures.dart` (both under `lib/ui/views/accountmanagement/`), `test/po_assigned_cards_test.dart`, and this record. Added `lib/ui/views/accountmanagement/po_assigned_filter_dialog.dart`; no renames/deletions. Assigned only now uses a bounded responsive popup with a centered white title on a black header, category selection, white search field, light grey option rows, right-aligned black filled selection icons, and capsule Reset/Apply Filter buttons in their existing left/right grouping. The top-right filter icon has an explicit 40-pixel tap area and an active-selection tint.
+- New presentation widget `PoAssignedFilterDialog` receives existing `FilterList` groups, `onReset`/`onApply` callbacks and an optional preview flag. Existing live filter endpoint, IDs, payload construction, permission gating and refresh actions are retained. Other PO screens keep their existing filter popup.
+- Assigned-only preview fixtures provide Vendor, Booking Type and Delivery Status options, explicitly labelled as sample options. No new backend operations/data requirements; live categories/options still come from the current filter response. Preview rows remain the existing fixtures: selecting options demonstrates selection/search/reset/apply UI, not server-side filtering of fixture rows.
+- No assets, fonts, dependencies or platform changes. Baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`; this batch is uncommitted/unpushed.
+- Validation: network-blocked Assigned tests passed at widths 390 and 1920, covering popup opening, option selection, search, reset, apply, same-row buttons and existing card/document/signing behaviour. Initial mobile check exposed an asset-sized tap-target issue; the explicit icon tap area corrected it. Diff whitespace check passed; no live backend calls or screenshot review.
+
+## Next UI batch: continuous thin E-Sign pad border — 2026-11-06
+
+- Changed `lib/ui/views/accountmanagement/signature_dialog.dart` and this record; preserved the file's pre-existing changes. Reduced the signing area's outline from 2 to 1 logical pixel. Clipped its contents to the existing rounded shape and painted the outline over the contents so the white canvas cannot obscure the rounded border or leave visible corner gaps. Applies on mobile and desktop, including the shared saved-signature display.
+- Pad dimensions, buttons, signing controller, callbacks, permissions and data flow are unchanged. No added/deleted/renamed files, public interface, API, asset, font, dependency or platform changes; integration requirements remain unchanged.
+- Uncommitted comparison baseline: last delivered `50bc6c792741e1464d9744afce792c0013ff8005`. Validation: focused offline Assigned/dialog checks passed at mobile width 390 and desktop width 1920 (2 tests); whitespace check passed. No live backend requests or visual screenshot review.
+
+## Next UI batch: compact expanded Assigned card — 2026-11-06
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart`, `test/po_assigned_cards_test.dart`, and this record. Assigned now shares Verified's reduced expanded-card spacing: removes the ListTile's extra 12-pixel vertical padding and first details block's 8-pixel top padding, while retaining the separate upper arrow row.
+- Removed the bottom divider/spacer below Grades/final details in expanded Assigned cards. Verified retains its existing layout; Issued retains its prior spacing/divider. Buttons, internal action order, callbacks, permissions and data flow are unchanged.
+- Added a layout check that the first detail remains below the arrow rather than sharing its row. No API, assets, dependencies or public interfaces changed. Uncommitted comparison baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`.
+- Validation: tracked diff whitespace check passed; focused offline Assigned checks passed at mobile width 390 and desktop width 1920, including separation of the arrow and first detail row. No live screenshot/backend checks.
+
+## Next UI batch: taller desktop date-filter inputs — 2026-11-06
+
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. PO Requests and E-Signed/Assigned desktop date fields now have a 44-pixel minimum height (previously 36) and 12-pixel vertical padding (previously 8), centered in the existing toolbar row with Filter and its actions.
+- Compact date-field sizing remains 32 minimum height with 8-pixel vertical padding. Submit/Reset sizes, order, grouping, callbacks and native date-picker popup are unchanged. Issued and other modules are unaffected.
+- No API, data, permission, asset, dependency or public-interface changes. Uncommitted comparison baseline remains last delivered `50bc6c792741e1464d9744afce792c0013ff8005`; actual imported baseline is not yet confirmed.
+- Validation: tracked diff whitespace check passed; focused offline desktop PO Requests/Assigned checks passed, including single-row date/action alignment. No live screenshot/backend check.
+
+## Next UI batch: Assigned date-filter parity — 2026-11-06
+
+- Comparison baseline remains last delivered commit `50bc6c792741e1464d9744afce792c0013ff8005`; integration import confirmation remains pending. This change is uncommitted and unpushed.
+- Changed `lib/ui/views/accountmanagement/porequested.dart` and this record. E-Signed/Assigned now uses PO Requests' compact date field padding/minimum heights and Submit/Reset sizes (32 compact, 36 desktop), including the same button padding and shrink-wrapped tap targets. Removed its divider below the search bar.
+- Field/button widths, row order, date selection, submit/reset callbacks and data loading are unchanged. Verified retains its existing appearance; Issued retains its prior toolbar/divider. No API, data, assets, dependencies, permission or public-interface changes.
+- Validation: tracked diff whitespace check passed; offline mobile (390) and desktop (1920) Assigned toolbar/card regression checks passed, including single-row filter alignment and document/signature actions. No live backend or screenshot checks.
+
+## Next UI batch: E-Signed/Assigned collapsible cards — 2026-11-06
+
+- Comparison baseline: last delivered commit `50bc6c792741e1464d9744afce792c0013ff8005`. The integration developer's actual imported hash is not yet confirmed. This new batch is uncommitted and is not included in that published handover.
+- Changed `lib/ui/views/accountmanagement/porequested.dart`; added `test/po_assigned_cards_test.dart`; updated the pre-existing broad test's Assigned expectations in `test/account_management_preview_test.dart`; updated this record. No renames/deletions, assets, fonts, dependencies, platform or public widget interfaces changed.
+- Assigned now shares the existing compact five-field summary and raised-card style. Cards start collapsed, expand/collapse independently with the arrow and show original card contents when expanded. Assigned expansion IDs are separated from Verified IDs; Verified behaviour and Issued rendering remain.
+- View Doc and E-Sign are both visible on the collapsed card's right side, below the arrow, in that order. Their existing document/signature dialogs remain separate actions. If `authorizeFlag != '1'`, E-Sign is visible but disabled; signing permissions are not bypassed. Expanded action order/grouping and Assigned body navigation retain their existing handlers, including document-count routing.
+- Existing private `_assignedSignatureButton` gains an optional `enabled` presentation argument; public screen constructors remain stable. The list refresh after closing its dialog now clears existing PO rows before reloading offset zero, preventing duplicates and ambiguous expansion keys. No endpoint, token, authentication, payload or server business rule changes were made.
+- Light PO/Delivery/Verified By badge fills and dark readable foregrounds also apply to Assigned. No demonstration data or preview configuration changes.
+- Checks: initial focused mobile Assigned regression passed. New network-blocked tests cover mobile/desktop collapsed actions, E-Sign authorization, independent dialog actions and expand/collapse. Their initial failure identified the duplicate-row refresh issue; the corrected six-test Assigned/Verified focused suite passed at 390 and 1920 widths with HTTP blocked. The three shared PO list regression tests (Verified, Assigned, Issued) also passed on desktop. No live backend requests or screenshot comparison.
+- The broad preview-test file contains unrelated pre-existing changes and must not be staged wholesale for a future focused handover; select the new Assigned test updates separately or use the new focused test file.
 
 
 ## Authorized first delivery record
