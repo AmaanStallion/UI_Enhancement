@@ -1,3 +1,5 @@
+import 'supply_preview.dart';
+import 'supply_style.dart';
 // import 'package:flutter/foundation.dart';
 // import 'package:flutter/material.dart';
 // import 'package:intl/intl.dart';
@@ -1103,6 +1105,48 @@ class _InventoryManagementState extends State<InventoryManagement> {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
+    if (useSupplyTestData) {
+      final orders = supplyPreviewOrders(
+          widget.projectId ?? '', widget.projectName ?? 'Sample Project');
+      setState(() {
+        dataProjectInventoryList = orders
+            .map((o) => ProjectInventoryListDatum(
+                  gradeIdFk: o.venderIdFk,
+                  gradeId: o.venderIdFk,
+                  gradeName: o.gradeName,
+                  totalQuantity: double.parse(o.orderQuantity!),
+                  totalConsum: 0.0,
+                  totalRemaing: double.parse(o.deliveryQuantity!),
+                  totalPoValue: o.poAmount,
+                  totalStockInValue: '62500',
+                  inventryTotalPoValue: '1250000',
+                  inventryTotalStockInValue: '250000',
+                  isCollapse: '0',
+                  description: [
+                    Description(
+                        gradeTypeId: o.venderIdFk,
+                        gradTypeName: o.gradeName,
+                        gradeIdFk: o.venderIdFk,
+                        gradeTypeIdFk: o.venderIdFk,
+                        totalQuantity: double.parse(o.orderQuantity!),
+                        totalConsum: '0',
+                        totalRemaing: double.parse(o.deliveryQuantity!),
+                        unitPrice: '1250',
+                        stockOut: '0',
+                        orderDeliveryDate: '16-11-2026',
+                        stockInCost: '62500',
+                        totalPoCost: double.parse(o.poAmount!))
+                  ],
+                ))
+            .toList();
+        filteredInventoryList = dataProjectInventoryList;
+        inventryTotalPoValue = '1250000';
+        inventryTotalStockInValue = '250000';
+      });
+      if (searchController.text.isNotEmpty)
+        filterSearchResults(searchController.text);
+      return null;
+    }
     CustomLoading.progressDialog(isLoading: true, context: context);
     final SharedPreferences prefs = await _prefs;
     String? userId = prefs.getString('mobileNo');
@@ -1114,16 +1158,19 @@ class _InventoryManagementState extends State<InventoryManagement> {
       if (startDate != null)
         "start_date": DateFormat('yyyy-MM-dd').format(startDate),
       if (endDate != null)
-        "end_date": DateFormat('yyyy-MM-dd')
-            .format(endDate.add(const Duration(days: 1))),
+        "end_date": DateFormat(
+          'yyyy-MM-dd',
+        ).format(endDate.add(const Duration(days: 1))),
     };
 
     if (kDebugMode) {
       print(data);
     }
 
-    var response =
-        await apiNetworkHandler.post(AppUrl.projectInventoryList, data);
+    var response = await apiNetworkHandler.post(
+      AppUrl.projectInventoryList,
+      data,
+    );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final dataModel = customerArchitectCertificateFromJson(response.body);
@@ -1159,9 +1206,11 @@ class _InventoryManagementState extends State<InventoryManagement> {
     } else {
       setState(() {
         filteredInventoryList = dataProjectInventoryList
-            ?.where((item) =>
-                item.gradeName?.toLowerCase().contains(query.toLowerCase()) ??
-                false)
+            ?.where(
+              (item) =>
+                  item.gradeName?.toLowerCase().contains(query.toLowerCase()) ??
+                  false,
+            )
             .toList();
         inspect(filteredInventoryList);
       });
@@ -1171,6 +1220,7 @@ class _InventoryManagementState extends State<InventoryManagement> {
   Future<void> selectDateRange(BuildContext context) async {
     final DateTimeRange? pickedRange = await showDateRangePicker(
       context: context,
+      builder: supplyPickerTheme,
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
       initialDateRange: selectedStartDate != null && selectedEndDate != null
@@ -1228,16 +1278,13 @@ class _InventoryManagementState extends State<InventoryManagement> {
   Future<void> openDesktopDateRangePicker() async {
     // if (!isDesktop) return; // prevent opening on mobile
 
-    final result = await showDialog(
+    final result = await showSupplyDialog(
       context: context,
       barrierDismissible: true,
       builder: (context) {
         return Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 650,
-              maxHeight: 520,
-            ),
+            constraints: const BoxConstraints(maxWidth: 650, maxHeight: 520),
             child: Material(
               color: Colors.transparent,
               child: _DesktopDateRangeDialog(
@@ -1273,6 +1320,7 @@ class _InventoryManagementState extends State<InventoryManagement> {
   Future<void> _selectFromDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
+      builder: supplyPickerTheme,
       initialDate: _selectedFormDate ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
@@ -1296,6 +1344,7 @@ class _InventoryManagementState extends State<InventoryManagement> {
   Future<void> _selectToDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
+      builder: supplyPickerTheme,
       initialDate: _selectedToDate ?? _selectedFormDate ?? DateTime.now(),
       firstDate: _selectedFormDate ?? DateTime(2000),
       lastDate: DateTime(2101),
@@ -1340,856 +1389,379 @@ class _InventoryManagementState extends State<InventoryManagement> {
     super.initState();
   }
 
+  double _number(dynamic value) =>
+      value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+  String _quantity(dynamic value) => _number(value).toStringAsFixed(2);
+  String _money(dynamic value) => currencyFormat.format(_number(value));
+
+  InputDecoration _fieldDecoration(String hint,
+          {Widget? suffix, bool search = false}) =>
+      InputDecoration(
+        isDense: true,
+        hintText: hint,
+        hintStyle: const TextStyle(
+            fontFamily: supplyFontFamily,
+            fontSize: 11,
+            color: Color(0xff9ca3ab)),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            EdgeInsets.symmetric(horizontal: 8, vertical: search ? 10 : 6),
+        prefixIcon: search
+            ? const Icon(Icons.search, size: 17, color: Color(0xff9ca3ab))
+            : null,
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 32, minHeight: 32),
+        suffixIcon: suffix,
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 20, minHeight: 28),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(search ? 24 : 10),
+            borderSide: const BorderSide(color: Color(0xffe1e5e9))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(search ? 24 : 10),
+            borderSide: const BorderSide(color: Color(0xffe1e5e9))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(search ? 24 : 10),
+            borderSide: const BorderSide(color: Color(0xffb8bec5))),
+      );
+
+  Widget _tableRow(List<String> cells,
+      {bool heading = false, Widget? trailing, bool detail = false}) {
+    final compact = supplyCompact(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 20, vertical: heading ? 10 : 14),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        for (int i = 0; i < cells.length; i++)
+          Expanded(
+              flex: compact && i == 0 ? 2 : 1,
+              child: Padding(
+                padding: EdgeInsets.only(
+                    right: i == 0 ? 6 : 2, left: i == 0 ? 0 : 2),
+                child: Text(cells[i],
+                    textAlign: i == 0 ? TextAlign.start : TextAlign.center,
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: compact ? (heading ? 11 : 12) : 15,
+                        fontWeight: heading || !detail
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: heading || detail
+                            ? Colors.black54
+                            : Colors.black87)),
+              )),
+        const SizedBox(width: 4),
+        SizedBox(width: 20, child: trailing),
+      ]),
+    );
+  }
+
+  Widget _total(String label, dynamic amount) => Expanded(
+          child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontFamily: supplyFontFamily,
+                  height: 1.15,
+                  fontSize: supplyCompact(context) ? 11 : 14,
+                  color: Colors.white70)),
+          const SizedBox(height: 3),
+          Text(_money(amount),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontFamily: supplyFontFamily,
+                  height: 1.15,
+                  fontSize: supplyCompact(context) ? 14 : 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white)),
+        ]),
+      ));
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.black,
-        ),
-        height: 50,
-        child: Row(
-          children: [
-            Container(
-              width: MediaQuery.of(context).size.width * 0.5,
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(color: Colors.grey.shade400, width: 1),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    "Remaining Value",
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
-                  ),
-                  Text(
-                    "₹$inventryTotalPoValue",
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: MediaQuery.of(context).size.width * 0.5,
-              child: Column(
-                children: [
-                  const Text(
-                    "Total Inventory Value",
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
-                  ),
-                  Text(
-                    "₹$inventryTotalStockInValue",
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    final compact = supplyCompact(context);
+    final gutter = compact ? 12.0 : 40.0;
+    return SupplySurface(
+        child: Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
         title: Text(
-            widget.towarName == ""
+            widget.towarName == ''
                 ? '${widget.projectName!.toUpperCase()} - ${widget.towarName!.toUpperCase()}'
                 : widget.projectName!.toUpperCase(),
-            style:
-                const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
-        // leading: widget.navigationFlag! == 'SideMenu'
-        //     ? const SizedBox()
-        //     : IconButton(
-        //         icon: const Icon(Icons.arrow_back, color: Colors.white),
-        //         onPressed: () {
-        //           Navigator.maybePop(context);
-        //         },
-        //       ),
-      ),
-      body: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          const Text(
-            'RAW MATERIAL INVENTORY',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Divider(),
-          const SizedBox(height: 12),
-
-          // Search and Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                // Search field
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 80),
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: filterSearchResults,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: Color.fromARGB(255, 184, 184, 184)),
-                      ),
-                      // Border when enabled but not focused
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: Color.fromARGB(255, 184, 184, 184)),
-                      ),
-
-                      // Border when focused
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(
-                            color: Color.fromARGB(255, 184, 184, 184),
-                            width: 2),
-                      ),
-                      hintText: 'Search by Raw Material',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                searchController.clear();
-                                filterSearchResults('');
-                              },
-                            )
-                          : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Date filter and Clear buttons
-                // Row(
-                //   children: [
-                //     Expanded(
-                //       child: InkWell(
-                //         onTap: openDesktopDateRangePicker,
-
-                //         // onTap: () => selectDateRange(context),
-                //         child: Container(
-                //           padding: const EdgeInsets.symmetric(
-                //               horizontal: 12, vertical: 10),
-                //           decoration: BoxDecoration(
-                //             border: Border.all(color: Colors.grey),
-                //             borderRadius: BorderRadius.circular(8),
-                //           ),
-                //           child: Row(
-                //             children: [
-                //               const Icon(Icons.calendar_today, size: 18),
-                //               const SizedBox(width: 8),
-                //               Expanded(
-                //                 child: Text(
-                //                   selectedStartDate == null
-                //                       ? 'Select Date Range'
-                //                       : '${DateFormat('dd-MM-yyyy').format(selectedStartDate!)} to ${DateFormat('dd-MM-yyyy').format(selectedEndDate!)}',
-                //                   overflow: TextOverflow.ellipsis,
-                //                   style: const TextStyle(fontSize: 12),
-                //                 ),
-                //               ),
-                //             ],
-                //           ),
-                //         ),
-                //       ),
-                //     ),
-                //     const SizedBox(width: 8),
-                //     InkWell(
-                //       onTap: clearFilters,
-                //       child: Container(
-                //         padding: const EdgeInsets.symmetric(
-                //             horizontal: 12, vertical: 10),
-                //         decoration: BoxDecoration(
-                //           color: Colors.grey[300],
-                //           borderRadius: BorderRadius.circular(8),
-                //         ),
-                //         child: const Text(
-                //           'Clear',
-                //           style: TextStyle(fontSize: 12),
-                //         ),
-                //       ),
-                //     ),
-                //   ],
-                // ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
-                  child: Form(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(width: 40),
-
-                        const Text(
-                          "From",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(width: 12),
-
-                        /// FROM DATE FIELD
-                        Expanded(
-                          child: TextFormField(
-                            onTap: () => _selectFromDate(context),
-                            controller: fromDateControler,
-                            readOnly: true,
-                            // enabled: false,
-                            decoration: const InputDecoration(
-                              hintText: '',
-                              hintStyle: TextStyle(color: Colors.black),
-                              suffixIcon: Icon(Icons.calendar_month_outlined),
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.all(12),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 14),
-                        const Text(
-                          "To",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(width: 12),
-
-                        /// TO DATE FIELD
-                        Expanded(
-                          child: TextFormField(
-                            onTap: () => _selectToDate(context),
-                            controller: toDateControler,
-                            // enabled: false,
-                            readOnly: true,
-                            decoration: const InputDecoration(
-                              hintText: '',
-                              hintStyle: TextStyle(color: Colors.black),
-                              suffixIcon: Icon(Icons.calendar_month_outlined),
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.all(12),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 20),
-
-                        /// SUBMIT BUTTON
-                        OutlinedButton(
-                          onPressed: _submitFilters,
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.black45),
-                          ),
-                          child: const Text(
-                            'Submit',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                        ),
-
-                        const SizedBox(width: 20),
-
-                        /// RESET BUTTON
-                        OutlinedButton(
-                          onPressed: _resetFilters,
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.black45),
-                          ),
-                          child: const Text(
-                            'Reset',
-                            style: TextStyle(color: Colors.black, fontSize: 16),
-                          ),
-                        ),
-
-                        const SizedBox(width: 40),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 241, 241, 241),
-              borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: const Color.fromARGB(255, 162, 162, 162)),
-            ),
-            // color: const Color.fromARGB(255, 241, 241, 241),
-            width: MediaQuery.of(context).size.width * 0.22 * 4 + 40,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  // color: Colors.amber,
-                  width: MediaQuery.of(context).size.width * 0.22,
-                  child: const Text(
-                    'Raw Material',
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                SizedBox(
-                  // color: Colors.cyan,
-                  width: MediaQuery.of(context).size.width * 0.22,
-                  child: const Text(
-                    'Stock In',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                SizedBox(
-                  // color: Colors.amber,
-                  width: MediaQuery.of(context).size.width * 0.22,
-                  child: const Text(
-                    'Stock Out',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                SizedBox(
-                  // color: Colors.cyan,
-                  width: MediaQuery.of(context).size.width * 0.22,
-                  child: const Text(
-                    'Remaining',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Colors.transparent,
-                )
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                // children: [
-                //   for (int index = 0;
-                //       index < (dataProjectInventoryList?.length ?? 0);
-                //       index++)
-                children: [
-                  if ((filteredInventoryList?.isEmpty ?? true))
-                    Container(
-                      padding: const EdgeInsets.all(40),
-                      child: const Text(
-                        'No inventory found',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    )
-                  else
-                    for (int index = 0;
-                        index < (filteredInventoryList?.length ?? 0);
-                        index++)
-                      GestureDetector(
-                        onTap: () {
-                          if (dataProjectInventoryList?[index].isCollapse ==
-                              "0") {
-                            setState(() {
-                              // dataProjectInventoryList?[index].isCollapse = "1";
-                              filteredInventoryList?[index].isCollapse = "1";
-                            });
-                          } else {
-                            setState(() {
-                              // dataProjectInventoryList?[index].isCollapse = "0";
-                              filteredInventoryList?[index].isCollapse = "1";
-                            });
-                          }
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 20),
-                          decoration: BoxDecoration(
-                            // color: const Color.fromARGB(255, 241, 241, 241),
-                            color: Colors
-                                .white, // optional, makes shadow more visible
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey
-                                    .withOpacity(0.3), // shadow color
-                                spreadRadius: 2, // how much the shadow spreads
-                                blurRadius: 6, // how soft the shadow looks
-                                offset: const Offset(0, 3), // position: x, y
-                              ),
-                            ],
-
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color:
-                                    const Color.fromARGB(255, 162, 162, 162)),
-                          ),
-                          // color: const Color.fromARGB(255, 241, 241, 241),
-                          width:
-                              MediaQuery.of(context).size.width * 0.22 * 4 + 40,
-                          child: Container(
-                            // decoration: BoxDecoration(
-                            // borderRadius: BorderRadius.circular(8),
-                            // border: Border.all(color: Colors.black),
-                            // ),
-                            // color: const Color.fromARGB(255, 241, 241, 241),
-                            // margin: const EdgeInsets.symmetric(vertical: 10),
-                            child: Column(
-                              // crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    // horizontal: 20,
-                                  ),
-                                  // width: double.maxFinite,
-                                  // decoration: BoxDecoration(
-                                  //   color: const Color.fromARGB(
-                                  //       255, 241, 241, 241),
-                                  //   borderRadius: BorderRadius.circular(8),
-                                  //   // border: Border.all(color: Colors.black),
-                                  // ),
-                                  child:
-                                      // Row(
-                                      //   children: [
-                                      //     Text(
-                                      // dataProjectInventoryList?[index]
-                                      //         .gradeName ??
-                                      //     '',
-                                      //       style: const TextStyle(
-                                      //           color: Colors.black,
-                                      //           fontSize: 18,
-                                      //           fontWeight: FontWeight.w600),
-                                      //     ),
-                                      //     const Spacer(),
-                                      // Icon(dataProjectInventoryList?[index]
-                                      //             .isCollapse ==
-                                      //         "1"
-                                      //     ? Icons.keyboard_arrow_up_rounded
-                                      //     : Icons.keyboard_arrow_down_rounded)
-                                      //   ],
-                                      // ),
-                                      Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SizedBox(
-                                        // color: Colors.amber,
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.22,
-                                        child: Text(
-                                          filteredInventoryList?[index]
-                                                  .gradeName ??
-                                              '',
-                                          style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        // color: Colors.cyan,
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.22,
-                                        child: Text(
-                                          filteredInventoryList?[index]
-                                                  .totalQuantity!
-                                                  .toStringAsFixed(2) ??
-                                              '',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        // color: Colors.amber,
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.22,
-                                        child: Text(
-                                          filteredInventoryList?[index]
-                                                  .totalConsum!
-                                                  .toStringAsFixed(2) ??
-                                              '',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        // color: Colors.cyan,
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.22,
-                                        child: Text(
-                                          filteredInventoryList?[index]
-                                                  .totalRemaing
-                                                  .toStringAsFixed(2) ??
-                                              '',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      ),
-                                      Icon(filteredInventoryList?[index]
-                                                  .isCollapse ==
-                                              "1"
-                                          ? Icons.keyboard_arrow_up_rounded
-                                          : Icons.keyboard_arrow_down_rounded)
-                                    ],
-                                  ),
-                                ),
-
-                                // if (dataProjectInventoryList?[index].isCollapse ==
-                                //     "1")
-                                //   Container(
-                                //       padding:
-                                //           EdgeInsets.symmetric(horizontal: 10),
-                                //       child: Divider()),
-                                //   Container(
-                                //     decoration: BoxDecoration(
-                                //       color: const Color.fromARGB(
-                                //           255, 241, 241, 241),
-                                //       borderRadius: BorderRadius.circular(8),
-                                //       // border: Border.all(color: Colors.black),
-                                //     ),
-                                //     padding: EdgeInsets.symmetric(vertical: 6),
-                                //     margin: EdgeInsets.symmetric(horizontal: 4),
-                                //     child: Row(
-                                //       mainAxisAlignment: MainAxisAlignment.center,
-                                //       children: [
-                                //         Container(
-                                //           // color: Colors.amber,
-                                //           decoration: BoxDecoration(
-                                //             border: Border(
-                                //               right: BorderSide(
-                                //                   color: Colors.grey.shade400,
-                                //                   width: 1),
-                                //             ),
-                                //           ),
-                                //           width:
-                                //               MediaQuery.of(context).size.width *
-                                //                   0.22,
-                                //           child: Text(
-                                //             'Raw Material',
-                                //             style: TextStyle(
-                                //                 color: Colors.black,
-                                //                 fontSize: 16,
-                                //                 fontWeight: FontWeight.w600),
-                                //           ),
-                                //         ),
-                                //         Container(
-                                //           // color: Colors.cyan,
-                                //           decoration: BoxDecoration(
-                                //             border: Border(
-                                //               right: BorderSide(
-                                //                   color: Colors.grey.shade400,
-                                //                   width: 1),
-                                //             ),
-                                //           ),
-                                //           width:
-                                //               MediaQuery.of(context).size.width *
-                                //                   0.22,
-                                //           child: Text(
-                                //             'Stock In',
-                                //             textAlign: TextAlign.center,
-                                //             style: TextStyle(
-                                //                 color: Colors.black,
-                                //                 fontSize: 16,
-                                //                 fontWeight: FontWeight.w600),
-                                //           ),
-                                //         ),
-                                //         Container(
-                                //           // color: Colors.amber,
-                                //           decoration: BoxDecoration(
-                                //             border: Border(
-                                //               right: BorderSide(
-                                //                   color: Colors.grey.shade400,
-                                //                   width: 1),
-                                //             ),
-                                //           ),
-                                //           width:
-                                //               MediaQuery.of(context).size.width *
-                                //                   0.22,
-                                //           child: Text(
-                                //             'Stock Out',
-                                //             textAlign: TextAlign.center,
-                                //             style: TextStyle(
-                                //                 color: Colors.black,
-                                //                 fontSize: 16,
-                                //                 fontWeight: FontWeight.w600),
-                                //           ),
-                                //         ),
-                                //         Container(
-                                //           // color: Colors.cyan,
-                                //           width:
-                                //               MediaQuery.of(context).size.width *
-                                //                   0.22,
-                                //           child: Text(
-                                //             'Remaining',
-                                //             textAlign: TextAlign.center,
-                                //             style: TextStyle(
-                                //                 color: Colors.black,
-                                //                 fontSize: 16,
-                                //                 fontWeight: FontWeight.w600),
-                                //           ),
-                                //         ),
-                                //         Icon(
-                                //           Icons.keyboard_arrow_down_rounded,
-                                //           color: Colors.transparent,
-                                //         )
-                                //       ],
-                                //     ),
-                                //   ),
-                                if (dataProjectInventoryList?[index]
-                                        .isCollapse ==
-                                    "1")
-                                  Container(
-                                      decoration: BoxDecoration(
-                                          color: const Color.fromARGB(
-                                              255, 241, 241, 241),
-                                          border: Border(
-                                              top: BorderSide(
-                                                  color: Colors.grey.shade400,
-                                                  width: 1))),
-                                      height: 10),
-                                for (int i = 0;
-                                    i <
-                                        dataProjectInventoryList![index]
-                                            .description!
-                                            .length;
-                                    i++)
-                                  if (dataProjectInventoryList?[index]
-                                          .isCollapse ==
-                                      "1")
-                                    Container(
-                                      color: const Color.fromARGB(
-                                          255, 241, 241, 241),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            // color: Colors.amber,
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                // bottom: BorderSide(
-                                                //     color: Colors.grey.shade400,
-                                                //     width: 1),
-                                                right: BorderSide(
-                                                    color: Colors.grey.shade300,
-                                                    width: 1),
-                                              ),
-                                            ),
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.22,
-                                            child: Text(
-                                              dataProjectInventoryList![index]
-                                                      .description![i]
-                                                      .gradTypeName ??
-                                                  '',
-                                              style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 20),
-                                            decoration: BoxDecoration(
-                                              // color: Colors.cyan,
-                                              border: Border(
-                                                // bottom: BorderSide(
-                                                //     color: Colors.grey.shade400,
-                                                //     width: 1),
-                                                right: BorderSide(
-                                                    color: Colors.grey.shade300,
-                                                    width: 1),
-                                              ),
-                                            ),
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.22,
-                                            child: Text(
-                                              dataProjectInventoryList![index]
-                                                  .description![i]
-                                                  .totalQuantity!
-                                                  .toStringAsFixed(2),
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                          ),
-                                          Container(
-                                            // color: Colors.amber,
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                // bottom: BorderSide(
-                                                //     color: Colors.grey.shade400,
-                                                //     width: 1),
-                                                right: BorderSide(
-                                                  color: Colors.grey.shade300,
-                                                ),
-                                              ),
-                                            ),
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.22,
-                                            child: Text(
-                                              dataProjectInventoryList![index]
-                                                  .description![i]
-                                                  .totalConsum!
-                                                  .toStringAsFixed(2),
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                          ),
-                                          Container(
-                                            decoration: const BoxDecoration(
-                                              border: Border(
-                                                  // bottom: BorderSide(
-                                                  //     color: Colors.grey.shade400,
-                                                  //     width: 1),
-                                                  // right: BorderSide(
-                                                  //     color: Colors.grey.shade400,
-                                                  //     width: 1),
-                                                  ),
-                                            ),
-                                            // color: Colors.cyan,
-                                            width: MediaQuery.of(context)
-                                                    .size
-                                                    .width *
-                                                0.22,
-                                            child: Text(
-                                              dataProjectInventoryList![index]
-                                                  .description![i]
-                                                  .totalRemaing!
-                                                  .toStringAsFixed(2),
-                                              textAlign: TextAlign.center,
-                                              style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                          ),
-                                          const Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            color: Colors.transparent,
-                                          )
-                                        ],
-                                      ),
-                                    ),
-                                if (dataProjectInventoryList?[index]
-                                        .isCollapse ==
-                                    "1")
-                                  Container(
-                                    color: const Color.fromARGB(
-                                        255, 241, 241, 241),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          // color: Colors.amber,
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.44,
-                                          child: Text(
-                                            // 'Stock In Value : ₹${dataProjectInventoryList![index].totalStockInValue}',
-                                            'Stock In Value : ${currencyFormat.format(double.parse(dataProjectInventoryList![index].totalStockInValue.toStringAsFixed(2)))}',
-
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          // color: Colors.cyan,
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.44,
-                                          child: Text(
-                                            // 'Remaining Stock Value : ₹${dataProjectInventoryList![index].totalPoValue}',
-                                            'Remaining Stock Value : ${currencyFormat.format(double.parse(dataProjectInventoryList![index].totalPoValue.toStringAsFixed(2)))}',
-
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700),
-                                          ),
-                                        ),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          color: Colors.transparent,
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                fontFamily: supplyFontFamily,
+                fontSize: compact ? 14 : 17,
+                fontWeight: FontWeight.w600)),
       ),
-    );
+      bottomNavigationBar: SafeArea(
+          top: false,
+          child: Container(
+            height: 56,
+            color: Colors.black,
+            child: Row(children: [
+              _total('Remaining Value', inventryTotalPoValue),
+              Container(width: 1, height: 32, color: Colors.white24),
+              _total('Total Inventory Value', inventryTotalStockInValue),
+            ]),
+          )),
+      body: SafeArea(
+          child: Column(children: [
+        const SizedBox(
+            height: 40,
+            child: Center(
+                child: Text('RAW MATERIAL INVENTORY',
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500)))),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 96),
+          child: SizedBox(
+              height: 34,
+              child: TextField(
+                key: const ValueKey('inventory-search'),
+                controller: searchController,
+                onChanged: filterSearchResults,
+                style:
+                    const TextStyle(fontFamily: supplyFontFamily, fontSize: 12),
+                decoration: _fieldDecoration('Search by Raw Material',
+                    search: true,
+                    suffix: searchController.text.isNotEmpty
+                        ? IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                                minWidth: 30, minHeight: 30),
+                            icon: const Icon(Icons.clear,
+                                size: 16, color: Colors.black54),
+                            onPressed: () {
+                              searchController.clear();
+                              filterSearchResults('');
+                            },
+                          )
+                        : null),
+              )),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+            padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 56),
+            child: Form(
+              child: Row(children: [
+                SizedBox(width: compact ? 0 : 40),
+                Text('From',
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: compact ? 11 : 16,
+                        color: Colors.black54)),
+                SizedBox(width: compact ? 4 : 12),
+                Expanded(
+                    child: SizedBox(
+                        height: 30,
+                        child: TextFormField(
+                          key: const ValueKey('inventory-from'),
+                          controller: fromDateControler,
+                          readOnly: true,
+                          onTap: () => _selectFromDate(context),
+                          style: TextStyle(
+                              fontFamily: supplyFontFamily,
+                              fontSize: compact ? 10 : 13),
+                          decoration: _fieldDecoration('',
+                              suffix: Icon(Icons.calendar_month_outlined,
+                                  size: compact ? 13 : 18,
+                                  color: Colors.black54)),
+                        ))),
+                SizedBox(width: compact ? 4 : 14),
+                Text('To',
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: compact ? 11 : 16,
+                        color: Colors.black54)),
+                SizedBox(width: compact ? 4 : 12),
+                Expanded(
+                    child: SizedBox(
+                        height: 30,
+                        child: TextFormField(
+                          key: const ValueKey('inventory-to'),
+                          controller: toDateControler,
+                          readOnly: true,
+                          onTap: () => _selectToDate(context),
+                          style: TextStyle(
+                              fontFamily: supplyFontFamily,
+                              fontSize: compact ? 10 : 13),
+                          decoration: _fieldDecoration('',
+                              suffix: Icon(Icons.calendar_month_outlined,
+                                  size: compact ? 13 : 18,
+                                  color: Colors.black54)),
+                        ))),
+                SizedBox(width: compact ? 4 : 20),
+                SizedBox(
+                    width: compact ? 48 : null,
+                    height: 30,
+                    child: OutlinedButton(
+                      key: const ValueKey('inventory-submit'),
+                      onPressed: _submitFilters,
+                      style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 4 : 20),
+                          minimumSize: Size.zero,
+                          shape: const StadiumBorder(),
+                          side: const BorderSide(color: Colors.black)),
+                      child: Text('Submit',
+                          style: TextStyle(
+                              fontFamily: supplyFontFamily,
+                              fontSize: compact ? 10 : 14)),
+                    )),
+                SizedBox(width: compact ? 4 : 20),
+                SizedBox(
+                    width: compact ? 44 : null,
+                    height: 30,
+                    child: OutlinedButton(
+                      key: const ValueKey('inventory-reset'),
+                      onPressed: _resetFilters,
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 4 : 20),
+                          minimumSize: Size.zero,
+                          shape: const StadiumBorder(),
+                          side: const BorderSide(color: Color(0xffd5d9de))),
+                      child: Text('Reset',
+                          style: TextStyle(
+                              fontFamily: supplyFontFamily,
+                              fontSize: compact ? 10 : 14)),
+                    )),
+                SizedBox(width: compact ? 0 : 40),
+              ]),
+            )),
+        const SizedBox(height: 12),
+        Container(
+            margin: EdgeInsets.symmetric(horizontal: gutter),
+            decoration: BoxDecoration(
+                color: const Color(0xffeef0f2),
+                borderRadius: BorderRadius.circular(12)),
+            child: _tableRow(
+                ['Raw Material', 'Stock In', 'Stock Out', 'Remaining'],
+                heading: true)),
+        const SizedBox(height: 4),
+        Expanded(
+            child: (filteredInventoryList?.isEmpty ?? true)
+                ? const Center(
+                    child: Text('No inventory found',
+                        style: TextStyle(
+                            fontFamily: supplyFontFamily,
+                            fontSize: 14,
+                            color: Colors.black54)))
+                : ListView.builder(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: gutter, vertical: 8),
+                    itemCount: filteredInventoryList!.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredInventoryList![index];
+                      final expanded = item.isCollapse == '1';
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Colors.white, Color(0xfff4f6f8)]),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xffe1e5e9)),
+                          boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x14000000),
+                                blurRadius: 10,
+                                offset: Offset(0, 3))
+                          ],
+                        ),
+                        child: Material(
+                            color: Colors.transparent,
+                            child: Column(children: [
+                              InkWell(
+                                key: ValueKey(
+                                    'inventory-item-${item.gradeId ?? index}'),
+                                onTap: () => setState(() =>
+                                    item.isCollapse = expanded ? '0' : '1'),
+                                child: _tableRow([
+                                  item.gradeName ?? '',
+                                  _quantity(item.totalQuantity),
+                                  _quantity(item.totalConsum),
+                                  _quantity(item.totalRemaing)
+                                ],
+                                    trailing: Icon(
+                                        expanded
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
+                                        size: 20,
+                                        color: Colors.black54)),
+                              ),
+                              if (expanded) ...[
+                                const Divider(
+                                    height: 1, color: Color(0xffe1e5e9)),
+                                for (final description
+                                    in item.description ?? <Description>[])
+                                  _tableRow([
+                                    description.gradTypeName ?? '',
+                                    _quantity(description.totalQuantity),
+                                    _quantity(description.totalConsum),
+                                    _quantity(description.totalRemaing)
+                                  ], detail: true),
+                                const Divider(
+                                    height: 1, color: Color(0xffe9ecef)),
+                                Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 12),
+                                    child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                              child: Text(
+                                                  'Stock In Value : ${_money(item.totalStockInValue)}',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          supplyFontFamily,
+                                                      fontSize:
+                                                          compact ? 11 : 14,
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                              child: Text(
+                                                  'Remaining Stock Value : ${_money(item.totalPoValue)}',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                      fontFamily:
+                                                          supplyFontFamily,
+                                                      fontSize:
+                                                          compact ? 11 : 14,
+                                                      fontWeight:
+                                                          FontWeight.w600))),
+                                          const SizedBox(width: 24),
+                                        ])),
+                              ],
+                            ])),
+                      );
+                    },
+                  )),
+      ])),
+    ));
   }
 }
 
@@ -2230,9 +1802,9 @@ class _DesktopDateRangeDialogState extends State<_DesktopDateRangeDialog> {
             const Text(
               "Date Range Picker",
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+                  fontFamily: supplyFontFamily,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -2242,7 +1814,8 @@ class _DesktopDateRangeDialogState extends State<_DesktopDateRangeDialog> {
                   selectedRangeHighlightColor: Colors.purple.shade200,
                   // selectedRangeBackgroundColor: Colors.purple.shade200,
                   selectedDayHighlightColor: Colors.purple,
-                  selectedDayTextStyle: const TextStyle(color: Colors.white),
+                  selectedDayTextStyle: const TextStyle(
+                      fontFamily: supplyFontFamily, color: Colors.white),
                 ),
                 value: range,
                 onValueChanged: (values) => setState(() => range = values),

@@ -1,3 +1,4 @@
+import 'supply_module_assignment.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -562,6 +563,10 @@ class _WorkProgressListState extends ConsumerState<WorkProgressList> {
       return true; // old backend shows all active structures
     }
 
+    if (moduleKey == 'status_of_supply') {
+      return hasSupplyModuleAssignment(assignedModules ?? []);
+    }
+
     // Explicitly ignore templates module
     if (moduleKey == 'templates') {
       return false;
@@ -788,6 +793,17 @@ class _WorkProgressListState extends ConsumerState<WorkProgressList> {
         activeStructures.add(ProjectStructure(
           title: "Request Work Order",
           discription: "Work Orders & Contracts",
+          complete: "0",
+          issuse: "0",
+          isActive: "1",
+          isSetupDone: "1",
+          groupFlag: "0",
+        ));
+      }
+      if (isModuleAssigned('status_of_supply')) {
+        activeStructures.add(ProjectStructure(
+          title: "Status of Supplies",
+          discription: "Track purchase order supplies and delivery progress.",
           complete: "0",
           issuse: "0",
           isActive: "1",

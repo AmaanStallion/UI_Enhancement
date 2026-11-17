@@ -1,3 +1,5 @@
+import 'supply_preview.dart';
+import 'supply_style.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +45,7 @@ class StatusOfSupplyView extends StatefulWidget {
 
 class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
   late NotificationArgs args;
+  bool _initialRequestsStarted = false;
 
   @override
   void didChangeDependencies() {
@@ -61,6 +64,11 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
           navigationFlag: 'SideMenu',
         ),
       );
+    }
+    if (!_initialRequestsStarted) {
+      _initialRequestsStarted = true;
+      fetchPoStatusOfSupply();
+      getLeadFilter();
     }
   }
 
@@ -93,6 +101,36 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
   }
 
   Future<ResponseGetPoStatusOfSupply?> fetchPoStatusOfSupply() async {
+    if (useSupplyTestData) {
+      var orders = supplyPreviewOrders(
+          args.projectId ?? '', args.projectName ?? 'Sample Project');
+      final query = searchTermValue.trim().toLowerCase();
+      orders = orders
+          .where(
+              (o) => '${o.poNo} ${o.venderName}'.toLowerCase().contains(query))
+          .toList();
+      final selected = filteredList
+              ?.expand((f) => f.details ?? <Detail>[])
+              .map((d) => d.id)
+              .toSet() ??
+          <String?>{};
+      if (selected.isNotEmpty)
+        orders = orders.where((o) => selected.contains(o.venderIdFk)).toList();
+      if (!flagSortBy) orders.sort((a, b) => a.poNo!.compareTo(b.poNo!));
+      setState(() {
+        rccBookingHistory = orders;
+        norecord = orders.isEmpty;
+        flagcalled = true;
+        poRawMaterialFlag = '1';
+        offset = '0';
+        towarLists = [
+          TowarList(towarId: '', towarName: 'All Tower'),
+          TowarList(towarId: 'sample-a', towarName: 'Tower A')
+        ];
+      });
+      return null;
+    }
+
     final SharedPreferences prefs = await _prefs;
     String? userId = prefs.getString('mobileNo');
     String? loginType = prefs.getString('loginType');
@@ -117,8 +155,10 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
       print(data);
     }
 
-    var response =
-        await apiNetworkHandler.post(AppUrl.webSupplierBookingHistory, data);
+    var response = await apiNetworkHandler.post(
+      AppUrl.webSupplierBookingHistory,
+      data,
+    );
     if (kDebugMode) {
       print(response.statusCode);
     }
@@ -190,8 +230,9 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
     return null;
   }
 
-  final RefreshController _refreshController =
-      RefreshController(initialRefresh: false);
+  final RefreshController _refreshController = RefreshController(
+    initialRefresh: false,
+  );
 
   void _onRefresh() async {
     // monitor network fetch
@@ -212,6 +253,21 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
   }
 
   Future<ResponseGetAllSalesLead?> getLeadFilter() async {
+    if (useSupplyTestData) {
+      if (filterListData!.isEmpty) {
+        filterListData = [
+          FilterList(
+              id: 'vendor',
+              name: 'Vendor',
+              details: supplyPreviewOrders('', '')
+                  .map((o) => Detail(
+                      id: o.venderIdFk, name: o.venderName, isSelected: false))
+                  .toList())
+        ];
+      }
+      return null;
+    }
+
     final SharedPreferences prefs = await _prefs;
     String? userId = prefs.getString('mobileNo');
     Map<String, String> data = {
@@ -236,31 +292,616 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    fetchPoStatusOfSupply();
-    getLeadFilter();
-  }
-
-  @override
   void dispose() {
     super.dispose();
   }
 
+  Future<void> _showVendorContacts(RccBookingHistory order) async {
+    final contacts = order.venderPhone ?? <VenderPhone>[];
+    await showSupplyDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey('supply-vendor-contacts'),
+        clipBehavior: Clip.antiAlias,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: EdgeInsets.zero,
+        contentPadding: const EdgeInsets.all(12),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        actionsAlignment: MainAxisAlignment.center,
+        title: Container(
+          width: double.infinity,
+          color: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Text(order.venderName ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontFamily: supplyFontFamily,
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
+        ),
+        content: SizedBox(
+          width: 360,
+          height: (MediaQuery.sizeOf(dialogContext).height * .32)
+              .clamp(150.0, 260.0),
+          child: contacts.isEmpty
+              ? const Center(
+                  child: Text('No contact details available',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontFamily: supplyFontFamily,
+                          fontSize: 13,
+                          color: Colors.black54)))
+              : ListView.separated(
+                  itemCount: contacts.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final contact = contacts[index];
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                          color: const Color(0xfff8f9fa),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xffe9ecef))),
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                    color: Color(0xffeef0f2),
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.person_outline_rounded,
+                                    size: 18, color: Colors.black54)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text(contact.venderName ?? '',
+                                      style: const TextStyle(
+                                          fontFamily: supplyFontFamily,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87)),
+                                  const SizedBox(height: 5),
+                                  Text(contact.venderPhoneNumber ?? '',
+                                      style: const TextStyle(
+                                          fontFamily: supplyFontFamily,
+                                          fontSize: 13,
+                                          color: Colors.black54)),
+                                ])),
+                          ]),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          SizedBox(
+              width: 250,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: const StadiumBorder(),
+                    textStyle: const TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+                child: const Text('Close'),
+              ))
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showTowerSelection() async {
+    await showSupplyDialog<void>(
+      barrierDismissible: false,
+      context: context,
+      builder: (dialogContext) => Dialog(
+        clipBehavior: Clip.antiAlias,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SizedBox(
+          width: 360,
+          height: (MediaQuery.sizeOf(dialogContext).height * .6)
+              .clamp(220.0, 400.0),
+          child: Column(children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              color: Colors.black,
+              child: const Text('SELECT TOWER',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: supplyFontFamily,
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
+            ),
+            Expanded(
+                child: ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: towarLists?.length ?? 0,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final tower = towarLists![index];
+                final selected = args.response?.towarId == tower.towarId;
+                return Material(
+                  color: selected ? const Color(0xfff0f2f4) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                          color: selected
+                              ? const Color(0xffd5d9de)
+                              : const Color(0xffe9ecef))),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      offset = '0';
+                      searchTermValue = '';
+                      rccBookingHistory = [];
+                      editingController.clear();
+                      args.response?.towarId = tower.towarId;
+                      setState(() => strTowarName = tower.towarName);
+                      fetchPoStatusOfSupply();
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 14),
+                      child: Row(children: [
+                        Expanded(
+                            child: Text(tower.towarName ?? '',
+                                style: TextStyle(
+                                    fontFamily: supplyFontFamily,
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400))),
+                        const SizedBox(width: 12),
+                        Icon(
+                            selected
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked,
+                            size: 22,
+                            color: selected
+                                ? Colors.black
+                                : const Color(0xff9ca3ab)),
+                      ]),
+                    ),
+                  ),
+                );
+              },
+            )),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(0, 40),
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(
+                            fontFamily: supplyFontFamily,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                    child: const Text('OK'),
+                  )),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSupplyFilters() async {
+    await showSupplyDialog<void>(
+      context: context,
+      builder: (dialogContext) =>
+          StatefulBuilder(builder: (context, updateDialog) {
+        final groups = filterListData ?? <FilterList>[];
+        final selectedGroup = groups.isEmpty
+            ? null
+            : groups[filterListSelected.clamp(0, groups.length - 1)];
+        final options = (selectedGroup?.details ?? <Detail>[])
+            .where((item) => (item.name ?? '')
+                .toLowerCase()
+                .contains(searchText.toLowerCase()))
+            .toList();
+        return AlertDialog(
+          clipBehavior: Clip.antiAlias,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 8,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: EdgeInsets.zero,
+          contentPadding: EdgeInsets.zero,
+          actionsPadding: const EdgeInsets.all(12),
+          title: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            color: Colors.black,
+            child: const Text('FILTER',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontFamily: supplyFontFamily,
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
+          ),
+          content: SizedBox(
+            width: 680,
+            height:
+                (MediaQuery.sizeOf(context).height * .55).clamp(160.0, 420.0),
+            child: LayoutBuilder(
+                builder: (context, constraints) => Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          width:
+                              (constraints.maxWidth * .30).clamp(80.0, 180.0),
+                          decoration: const BoxDecoration(
+                              color: Color(0xfff4f6f8),
+                              border: Border(
+                                  right: BorderSide(color: Color(0xffe1e5e9)))),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 6),
+                            itemCount: groups.length,
+                            itemBuilder: (context, i) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Material(
+                                color: i == filterListSelected
+                                    ? Colors.white
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: () => updateDialog(() {
+                                    filterListSelected = i;
+                                    searchText = '';
+                                    searchController.clear();
+                                  }),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 14),
+                                    child: Row(children: [
+                                      Expanded(
+                                          child: Text(groups[i].name ?? '',
+                                              style: TextStyle(
+                                                  fontFamily: supplyFontFamily,
+                                                  fontSize:
+                                                      supplyCompact(context)
+                                                          ? 12
+                                                          : 14,
+                                                  fontWeight:
+                                                      i == filterListSelected
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                  color: i == filterListSelected
+                                                      ? Colors.black
+                                                      : Colors.black54))),
+                                      if (groups[i].ct > 0) ...[
+                                        const SizedBox(width: 4),
+                                        Container(
+                                            width: 5,
+                                            height: 5,
+                                            decoration: const BoxDecoration(
+                                                color: Colors.black,
+                                                shape: BoxShape.circle)),
+                                      ],
+                                    ]),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                            child: Column(children: [
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SizedBox(
+                                height: 36,
+                                child: TextFormField(
+                                  controller: searchController,
+                                  onChanged: (value) =>
+                                      updateDialog(() => searchText = value),
+                                  style: const TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search',
+                                    isDense: true,
+                                    hintStyle: const TextStyle(
+                                        fontFamily: supplyFontFamily,
+                                        fontSize: 13,
+                                        color: Color(0xff9ca3ab)),
+                                    prefixIcon: const Icon(Icons.search,
+                                        size: 18, color: Color(0xff9ca3ab)),
+                                    prefixIconConstraints: const BoxConstraints(
+                                        minWidth: 32, minHeight: 34),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 8),
+                                    filled: true,
+                                    fillColor: const Color(0xfff8f9fa),
+                                    enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xffe1e5e9))),
+                                    focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xffb8bec5))),
+                                  ),
+                                )),
+                          ),
+                          const Divider(height: 1, color: Color(0xffe9ecef)),
+                          Expanded(
+                              child: options.isEmpty
+                                  ? const Center(
+                                      child: Text('No options found',
+                                          style: TextStyle(
+                                              fontFamily: supplyFontFamily,
+                                              fontSize: 13,
+                                              color: Colors.black54)))
+                                  : ListView.builder(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 6),
+                                      itemCount: options.length,
+                                      itemBuilder: (context, k) {
+                                        final item = options[k];
+                                        final selected =
+                                            item.isSelected == true;
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 4),
+                                          child: Material(
+                                            color: selected
+                                                ? const Color(0xfff0f2f4)
+                                                : Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              onTap: () => updateDialog(() {
+                                                item.isSelected = !selected;
+                                                selectedGroup!.ct +=
+                                                    selected ? -1 : 1;
+                                              }),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 12),
+                                                child: Row(children: [
+                                                  Icon(
+                                                      selected
+                                                          ? Icons
+                                                              .check_box_rounded
+                                                          : Icons
+                                                              .check_box_outline_blank_rounded,
+                                                      size: 21,
+                                                      color: selected
+                                                          ? Colors.black
+                                                          : const Color(
+                                                              0xff9ca3ab)),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                      child: Text(
+                                                          item.name ?? '',
+                                                          style: TextStyle(
+                                                              fontFamily:
+                                                                  supplyFontFamily,
+                                                              fontSize: 13,
+                                                              fontWeight: selected
+                                                                  ? FontWeight
+                                                                      .w500
+                                                                  : FontWeight
+                                                                      .w400,
+                                                              color: Colors
+                                                                  .black87))),
+                                                ]),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )),
+                        ])),
+                      ],
+                    )),
+          ),
+          actions: [
+            Row(children: [
+              Expanded(
+                  child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: const TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                onPressed: () {
+                  for (final group in groups) {
+                    group.ct = 0;
+                    for (final item in group.details ?? <Detail>[]) {
+                      item.isSelected = false;
+                    }
+                  }
+                  searchController.clear();
+                  setState(() {
+                    searchText = '';
+                    flagcalled = false;
+                    offset = '0';
+                    filteredList = [];
+                    searchTermValue = '';
+                    rccBookingHistory = [];
+                  });
+                  Navigator.of(dialogContext).pop();
+                  fetchPoStatusOfSupply();
+                },
+                child: const Text('RESET'),
+              )),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    textStyle: const TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+                onPressed: () {
+                  setState(() {
+                    flagcalled = false;
+                    filteredList = groups
+                        .map((group) => FilterList(
+                            name: group.name,
+                            id: group.id,
+                            details: group.details
+                                    ?.where((item) => item.isSelected == true)
+                                    .toList() ??
+                                []))
+                        .toList();
+                    offset = '0';
+                    searchTermValue = '';
+                    rccBookingHistory = [];
+                  });
+                  Navigator.of(dialogContext).pop();
+                  fetchPoStatusOfSupply();
+                },
+                child: const FittedBox(
+                    fit: BoxFit.scaleDown, child: Text('APPLY FILTER')),
+              )),
+            ])
+          ],
+        );
+      }),
+    );
+  }
+
+  String? _expandedSupplyCard;
+  String _supplyCardId(RccBookingHistory order) =>
+      '${args.projectId}/${order.orderId ?? order.poNo}';
+
+  Widget _supplyToggle(RccBookingHistory order) {
+    final id = _supplyCardId(order);
+    final expanded = _expandedSupplyCard == id;
+    return SizedBox(
+        width: 24,
+        height: 32,
+        child: IconButton(
+          key: ValueKey('supply-card-toggle-${order.orderId ?? order.poNo}'),
+          tooltip: expanded
+              ? 'Minimise PO ${order.poNo}'
+              : 'Expand PO ${order.poNo}',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 24, height: 32),
+          onPressed: () =>
+              setState(() => _expandedSupplyCard = expanded ? null : id),
+          icon: Icon(
+              expanded
+                  ? Icons.keyboard_arrow_up_rounded
+                  : Icons.keyboard_arrow_down_rounded,
+              size: 22,
+              color: Colors.black54),
+        ));
+  }
+
+  Widget _supplyGrnButton(RccBookingHistory order) => InkWell(
+        onTap: () {
+          var projectId = args.projectId!;
+          var projectName = args.projectName!;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) {
+                return GrnListingView(
+                  projectId: projectId,
+                  towarId: args.response?.towarId ?? '',
+                  projectName: projectName,
+                  orderId: order.orderId!,
+                );
+              },
+            ),
+          );
+        },
+        child: Container(
+          height: 35,
+          width: 100,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Colors.grey,
+            ),
+            borderRadius: BorderRadius.circular(
+              10,
+            ),
+            color: Colors.white,
+            shape: BoxShape.rectangle,
+          ),
+          child: const Center(
+            child: Text(
+              'VIEW GRN',
+              style: TextStyle(
+                fontFamily: supplyFontFamily,
+                color: Colors.black,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+
+  Widget _supplyCard(RccBookingHistory order, {required InkWell child}) {
+    return SupplyCard(
+        child: AnimatedSize(
+      key: ValueKey('supply-card-transition-${_supplyCardId(order)}'),
+      alignment: Alignment.topCenter,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      child: SizedBox(width: double.infinity, child: child),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SupplySurface(
+      child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           centerTitle: true,
           elevation: 0,
           title: Text(
-              args.towarName == ""
-                  ? '${args.projectName!.toUpperCase()} - ${args.towarName!.toUpperCase()}'
-                  : args.projectName!.toUpperCase(),
-              style:
-                  const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
+            args.towarName == ""
+                ? '${args.projectName!.toUpperCase()} - ${args.towarName!.toUpperCase()}'
+                : args.projectName!.toUpperCase(),
+            style: const TextStyle(
+                fontFamily: supplyFontFamily,
+                fontStyle: FontStyle.normal,
+                fontSize: 17.0),
+          ),
           leading: args.response?.navigationFlag == 'SideMenu'
               ? const SizedBox()
               : IconButton(
@@ -270,9 +911,10 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                   },
                 ),
           actions: [
-            const SizedBox(width: 80),
+            SizedBox(width: supplyCompact(context) ? 4 : 80),
             if (poRawMaterialFlag == '1')
               InkWell(
+                borderRadius: BorderRadius.circular(24),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -289,20 +931,26 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                   );
                 },
                 child: Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  margin: EdgeInsets.symmetric(
+                    horizontal: supplyCompact(context) ? 6 : 50,
+                    vertical: 12,
+                  ),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: supplyCompact(context) ? 8 : 18),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0x18ffffff),
+                    border: Border.all(color: const Color(0xb3ffffff)),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Center(
                     child: Text(
                       "Inventory",
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600),
+                        fontFamily: supplyFontFamily,
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -333,7 +981,7 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
         ),
         body: Container(
           height: double.infinity,
-          color: Colors.white,
+          color: supplyBackground,
           child: SafeArea(
             child: flagcalled == true
                 ? Column(
@@ -344,496 +992,25 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                         child: Row(
                           children: [
                             const Spacer(),
-                            const Text('STATUS OF SUPPLY',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center),
+                            const Text(
+                              'STATUS OF SUPPLY',
+                              style: TextStyle(
+                                fontFamily: supplyFontFamily,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                             const Spacer(),
                             InkWell(
+                              key: const ValueKey('supply-filter'),
                               onTap: () {
                                 searchController.clear();
                                 setState(() {
                                   searchText = "";
                                 });
 
-                                showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return StatefulBuilder(
-                                        builder: (context, setState1) {
-                                          return AlertDialog(
-                                              elevation: 0,
-                                              shadowColor: Colors.white,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        8), // Set radius to zero
-                                              ),
-                                              titlePadding:
-                                                  const EdgeInsets.symmetric(
-                                                      vertical: 0),
-                                              actionsPadding:
-                                                  const EdgeInsets.only(
-                                                      bottom: 0),
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 0),
-                                              actionsAlignment:
-                                                  MainAxisAlignment.center,
-                                              title: Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 5),
-                                                decoration: const BoxDecoration(
-                                                    color: Colors.black,
-                                                    borderRadius:
-                                                        BorderRadius.only(
-                                                            topLeft: Radius
-                                                                .circular(8),
-                                                            topRight:
-                                                                Radius.circular(
-                                                                    8))),
-                                                child: const Text(
-                                                  "FILTER",
-                                                  style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w600),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                              actions: <Widget>[
-                                                Row(
-                                                  children: [
-                                                    InkWell(
-                                                      onTap: () {
-                                                        Navigator.of(context)
-                                                            .pop();
-                                                        searchController
-                                                            .clear();
-                                                        setState(() {
-                                                          searchText = "";
-                                                          flagcalled = false;
-                                                        });
-                                                        for (FilterList filter
-                                                            in filterListData!) {
-                                                          filter.ct = 0;
-                                                          for (Detail detail
-                                                              in filter
-                                                                  .details!) {
-                                                            setState1(() {
-                                                              detail.isSelected =
-                                                                  false;
-                                                            });
-                                                          }
-                                                        }
-                                                        setState1(() {
-                                                          offset = '0';
-
-                                                          filteredList = [];
-                                                          searchTermValue = '';
-                                                          rccBookingHistory =
-                                                              [];
-                                                        });
-
-                                                        filteredList = [];
-                                                        fetchPoStatusOfSupply();
-                                                        // Navigator.of(context).pop();
-                                                      },
-                                                      child: Container(
-                                                        width: MediaQuery.of(
-                                                                    context)
-                                                                .size
-                                                                .width *
-                                                            0.3,
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 4),
-                                                        decoration: const BoxDecoration(
-                                                            color: Colors.black,
-                                                            border: Border(
-                                                                right: BorderSide(
-                                                                    color: Colors
-                                                                        .white)),
-                                                            borderRadius:
-                                                                BorderRadius.only(
-                                                                    bottomLeft:
-                                                                        Radius.circular(
-                                                                            8))),
-                                                        child: const Text(
-                                                          "RESET",
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors.white,
-                                                          ),
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    InkWell(
-                                                      onTap: () {
-                                                        filteredList = [];
-                                                        setState(() {
-                                                          flagcalled = false;
-                                                        });
-                                                        // Filter the data
-                                                        for (FilterList filter
-                                                            in filterListData!) {
-                                                          List<Detail>?
-                                                              details = [];
-                                                          for (Detail detail
-                                                              in filter
-                                                                  .details!) {
-                                                            if (detail
-                                                                    .isSelected ==
-                                                                true) {
-                                                              details
-                                                                  .add(detail);
-                                                            }
-                                                          }
-                                                          // Add filtered details to the filteredList
-                                                          filteredList
-                                                              ?.add(FilterList(
-                                                            name: filter.name,
-                                                            id: filter.id,
-                                                            details: details,
-                                                          ));
-                                                        }
-                                                        setState1(() {
-                                                          offset = '0';
-                                                          searchTermValue = '';
-                                                          rccBookingHistory =
-                                                              [];
-                                                        });
-                                                        fetchPoStatusOfSupply();
-                                                        Navigator.of(context)
-                                                            .pop();
-                                                      },
-                                                      child: Container(
-                                                        width: MediaQuery.of(
-                                                                    context)
-                                                                .size
-                                                                .width *
-                                                            0.3,
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                                vertical: 4),
-                                                        decoration: const BoxDecoration(
-                                                            color: Colors.black,
-                                                            borderRadius:
-                                                                BorderRadius.only(
-                                                                    bottomRight:
-                                                                        Radius.circular(
-                                                                            8))),
-                                                        child: const Text(
-                                                          "APPLY FILTER",
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                            color: Colors.white,
-                                                          ),
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                )
-                                              ],
-                                              content: StatefulBuilder(builder:
-                                                  (BuildContext context1,
-                                                      StateSetter setState) {
-                                                return SizedBox(
-                                                  height: MediaQuery.of(context)
-                                                          .size
-                                                          .height *
-                                                      0.6,
-                                                  width: MediaQuery.of(context)
-                                                          .size
-                                                          .width *
-                                                      0.6,
-                                                  child: Column(
-                                                    children: [
-                                                      Row(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Container(
-                                                            height: MediaQuery.of(
-                                                                        context1)
-                                                                    .size
-                                                                    .height *
-                                                                0.6,
-                                                            width: MediaQuery.of(
-                                                                        context1)
-                                                                    .size
-                                                                    .width *
-                                                                0.2,
-                                                            color: Colors
-                                                                .grey.shade300,
-                                                            child:
-                                                                SingleChildScrollView(
-                                                              child: Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  for (int i =
-                                                                          0;
-                                                                      i <
-                                                                          filterListData!
-                                                                              .length;
-                                                                      i++)
-                                                                    InkWell(
-                                                                      onTap:
-                                                                          () {
-                                                                        setState1(
-                                                                            () {
-                                                                          filterListSelected =
-                                                                              i;
-                                                                          searchText =
-                                                                              '';
-                                                                          searchController
-                                                                              .clear();
-                                                                        });
-                                                                      },
-                                                                      child:
-                                                                          Container(
-                                                                        width: MediaQuery.of(context1).size.width *
-                                                                            0.2,
-                                                                        // color: Colors.white,
-                                                                        decoration: BoxDecoration(
-                                                                            color: i == filterListSelected
-                                                                                ? Colors.white
-                                                                                : Colors.transparent
-                                                                            // border: Border.all(
-                                                                            //     color:
-                                                                            //         Colors.black),
-                                                                            ),
-                                                                        padding: const EdgeInsets
-                                                                            .symmetric(
-                                                                            vertical:
-                                                                                14,
-                                                                            horizontal:
-                                                                                40),
-                                                                        child:
-                                                                            Row(
-                                                                          children: [
-                                                                            Text(
-                                                                              '${filterListData?[i].name}',
-                                                                              style: const TextStyle(
-                                                                                fontSize: 16,
-                                                                                fontWeight: FontWeight.w600,
-                                                                              ),
-                                                                            ),
-                                                                            if (filterListData![i].ct >
-                                                                                0)
-                                                                              Padding(
-                                                                                padding: const EdgeInsets.only(left: 7.0),
-                                                                                child: Container(
-                                                                                  height: 5,
-                                                                                  width: 5,
-                                                                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: Colors.black),
-                                                                                ),
-                                                                              )
-                                                                          ],
-                                                                        ),
-                                                                      ),
-                                                                    )
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          SizedBox(
-                                                            // height: 300,
-                                                            // width: 455,
-                                                            height: MediaQuery.of(
-                                                                        context1)
-                                                                    .size
-                                                                    .height *
-                                                                0.6,
-                                                            width: MediaQuery.of(
-                                                                        context1)
-                                                                    .size
-                                                                    .width *
-                                                                0.4,
-                                                            child: Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                const SizedBox(
-                                                                    height: 8),
-                                                                Container(
-                                                                  height: 36,
-                                                                  padding: const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          40),
-                                                                  child:
-                                                                      TextFormField(
-                                                                    controller:
-                                                                        searchController,
-                                                                    onChanged:
-                                                                        (value) {
-                                                                      setState(
-                                                                          () {
-                                                                        // filteredProjects();
-                                                                        searchText =
-                                                                            value;
-                                                                      });
-                                                                    },
-                                                                    style: const TextStyle(
-                                                                        color: Colors
-                                                                            .black,
-                                                                        fontSize:
-                                                                            13.0),
-                                                                    decoration:
-                                                                        const InputDecoration(
-                                                                      prefixIcon:
-                                                                          Icon(
-                                                                        Icons
-                                                                            .search,
-                                                                        size:
-                                                                            22,
-                                                                      ),
-
-                                                                      contentPadding: EdgeInsets.only(
-                                                                          bottom:
-                                                                              0,
-                                                                          left:
-                                                                              12),
-                                                                      // border: OutlineInputBorder(
-                                                                      //   borderSide: BorderSide(color: Colors.transparent),
-                                                                      // ),
-                                                                      border:
-                                                                          OutlineInputBorder(
-                                                                        borderRadius:
-                                                                            BorderRadius.all(Radius.circular(8.0)),
-                                                                      ),
-                                                                      hintText:
-                                                                          'Search',
-                                                                      hintStyle:
-                                                                          TextStyle(
-                                                                        color: Color.fromARGB(
-                                                                            255,
-                                                                            116,
-                                                                            116,
-                                                                            116),
-                                                                        fontSize:
-                                                                            13.0,
-                                                                        fontWeight:
-                                                                            FontWeight.w200,
-                                                                        fontFamily:
-                                                                            'HelveticaNeue',
-                                                                      ),
-                                                                      // suffixIcon: Icon(
-                                                                      //   Icons.calendar_month_outlined,
-                                                                      // ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                // const SizedBox(
-                                                                //   height: 10,
-                                                                // ),
-                                                                Divider(
-                                                                    color: Colors
-                                                                        .grey
-                                                                        .shade300),
-                                                                //      height: 300,
-                                                                // width: 282,
-                                                                // color: Colors.cyan,
-                                                                SizedBox(
-                                                                  // height: 240,
-                                                                  height: (MediaQuery.of(context1)
-                                                                              .size
-                                                                              .height *
-                                                                          0.6) -
-                                                                      62,
-                                                                  // width: 482,
-                                                                  // color: Colors.cyan,
-                                                                  child:
-                                                                      SingleChildScrollView(
-                                                                    child:
-                                                                        Column(
-                                                                      children: [
-                                                                        for (int k =
-                                                                                0;
-                                                                            k < filteredProjects()!.length;
-                                                                            k++)
-                                                                          InkWell(
-                                                                            onTap:
-                                                                                () {
-                                                                              setState1(() {
-                                                                                // if (filterListSelected == 0) {
-                                                                                //   bool? temp = filterListData![filterListSelected].details![k].isSelected;
-                                                                                //   filterListData?[filterListSelected].ct = temp == true ? 0 : 1;
-                                                                                //   for (int p = 0; p < filteredProjects()!.length; p++) {
-                                                                                //     filterListData![filterListSelected].details?[p].isSelected = false;
-                                                                                //   }
-
-                                                                                //   filterListData![filterListSelected].details?[k].isSelected = temp == true ? false : true;
-                                                                                //   // filterListData![filterListSelected]
-                                                                                //   //     .details?[
-                                                                                //   //         k]
-                                                                                //   //     .isSelected = filterListData![filterListSelected].details?[k].isSelected ==
-                                                                                //   //         false
-                                                                                //   //     ? true
-                                                                                //   //     : false;
-                                                                                // } else {
-                                                                                if (filteredProjects()?[k].isSelected == false) {
-                                                                                  filterListData?[filterListSelected].ct = filterListData![filterListSelected].ct + 1;
-                                                                                } else {
-                                                                                  filterListData?[filterListSelected].ct = filterListData![filterListSelected].ct - 1;
-                                                                                }
-                                                                                filteredProjects()?[k].isSelected = filteredProjects()?[k].isSelected == false ? true : false;
-                                                                                // }
-                                                                              });
-                                                                            },
-                                                                            child:
-                                                                                Container(
-                                                                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 5),
-                                                                              child: Row(
-                                                                                children: [
-                                                                                  Icon(filteredProjects()?[k].isSelected == true ? Icons.check_box_rounded : Icons.check_box_outline_blank_outlined),
-                                                                                  const SizedBox(width: 10),
-                                                                                  Text(
-                                                                                    filteredProjects()?[k].name ?? '',
-                                                                                    style: const TextStyle(
-                                                                                      fontSize: 16,
-                                                                                      fontWeight: FontWeight.w400,
-                                                                                    ),
-                                                                                  ),
-                                                                                ],
-                                                                              ),
-                                                                            ),
-                                                                          )
-                                                                      ],
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          )
-                                                        ],
-                                                      )
-                                                    ],
-                                                  ),
-                                                );
-                                              }));
-                                        },
-                                      );
-                                    });
+                                _showSupplyFilters();
                               },
                               child: Container(
                                 child: filteredList?.length != 0
@@ -855,166 +1032,34 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                           ],
                         ),
                       ),
-                      const Divider(
-                        height: 1.0,
-                        color: Colors.black,
-                      ),
+                      const Divider(height: 1.0, color: Colors.black),
                       args.response?.navigationFlag != 'SideMenu'
                           ? towarLists!.isNotEmpty
                               ? InkWell(
+                                  key: const ValueKey('supply-tower-selector'),
                                   onTap: () {
-                                    showDialog(
-                                        barrierDismissible: false,
-                                        context: context,
-                                        builder:
-                                            (BuildContext context) => Dialog(
-                                                  elevation: 0,
-                                                  child: SizedBox(
-                                                    height: 400,
-                                                    width: 360.0,
-                                                    child: Column(
-                                                      children: [
-                                                        const Padding(
-                                                          padding:
-                                                              EdgeInsets.only(
-                                                                  top: 5.0,
-                                                                  bottom: 5),
-                                                          child: Row(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .center,
-                                                            children: [
-                                                              Text(
-                                                                'SELECT TOWER',
-                                                                style: TextStyle(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        Divider(
-                                                          color: Colors
-                                                              .grey.shade500,
-                                                          thickness: 1.5,
-                                                        ),
-                                                        SizedBox(
-                                                          height: 310,
-                                                          width: 360,
-                                                          child:
-                                                              ListView.builder(
-                                                                  itemCount:
-                                                                      towarLists
-                                                                          ?.length,
-                                                                  itemBuilder:
-                                                                      (context,
-                                                                          index) {
-                                                                    return Column(
-                                                                      children: [
-                                                                        InkWell(
-                                                                          onTap:
-                                                                              () {
-                                                                            offset =
-                                                                                '0';
-                                                                            searchTermValue =
-                                                                                '';
-                                                                            rccBookingHistory =
-                                                                                [];
-                                                                            editingController.clear();
-                                                                            args.response?.towarId =
-                                                                                towarLists![index].towarId!;
-                                                                            towarLists![index].towarId!;
-                                                                            setState(() {
-                                                                              strTowarName = towarLists![index].towarName!;
-                                                                            });
-                                                                            fetchPoStatusOfSupply();
-                                                                            Navigator.of(context).pop();
-                                                                          },
-                                                                          child: Row(
-                                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                                              children: [
-                                                                                Padding(
-                                                                                  padding: const EdgeInsets.only(left: 10.0, bottom: 20.0, top: 15.0),
-                                                                                  child: Text(towarLists![index].towarName!),
-                                                                                ),
-                                                                                Padding(
-                                                                                  padding: const EdgeInsets.only(right: 10.0),
-                                                                                  child: Icon(
-                                                                                    args.response?.towarId == towarLists![index].towarId! ? Icons.check_circle_outline_sharp : Icons.circle_outlined,
-                                                                                    color: args.response?.towarId == towarLists![index].towarId! ? Colors.green : Colors.grey,
-                                                                                    size: 26,
-                                                                                  ),
-                                                                                ),
-                                                                              ]),
-                                                                        ),
-                                                                        const Divider(
-                                                                          height:
-                                                                              1,
-                                                                          thickness:
-                                                                              0.5,
-                                                                          color:
-                                                                              Colors.black,
-                                                                        ),
-                                                                      ],
-                                                                    );
-                                                                  }),
-                                                        ),
-                                                        Expanded(
-                                                          child: InkWell(
-                                                            onTap: () {
-                                                              Navigator.of(
-                                                                      context)
-                                                                  .pop();
-                                                            },
-                                                            child: Container(
-                                                              width: double
-                                                                  .infinity,
-                                                              color:
-                                                                  Colors.black,
-                                                              child:
-                                                                  const Padding(
-                                                                padding: EdgeInsets
-                                                                    .only(
-                                                                        top:
-                                                                            13.0),
-                                                                child: Text(
-                                                                  'OK',
-                                                                  style: TextStyle(
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .bold,
-                                                                      fontSize:
-                                                                          15),
-                                                                  textAlign:
-                                                                      TextAlign
-                                                                          .center,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ));
+                                    _showTowerSelection();
                                   },
                                   child: SizedBox(
+                                    height: 40,
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Text(strTowarName!.toUpperCase(),
-                                            style: const TextStyle(
-                                                fontStyle: FontStyle.normal,
-                                                fontSize: 17.0)),
+                                        Text(
+                                          strTowarName!.toUpperCase(),
+                                          style: const TextStyle(
+                                            fontFamily: supplyFontFamily,
+                                            fontStyle: FontStyle.normal,
+                                            fontSize: 15.0,
+                                          ),
+                                        ),
                                         horizontalSpaceSmall,
                                         IconButton(
                                           icon: const Icon(
-                                              Icons.arrow_drop_down,
-                                              color: Colors.black),
+                                            Icons.arrow_drop_down,
+                                            color: Colors.black,
+                                          ),
                                           onPressed: () {},
                                         ),
                                       ],
@@ -1035,98 +1080,122 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                         thickness: 0.5,
                         color: Colors.white,
                       ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xffeef0f2),
+                          border: Border.all(color: const Color(0xffe1e5e9)),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
                                 onTap: () {
                                   setState(() {
                                     if (flagSortBy == false) {
                                       flagSortBy = true;
-                                      DateFormat format =
-                                          DateFormat("dd-MM-yyyy");
+                                      DateFormat format = DateFormat(
+                                        "dd-MM-yyyy",
+                                      );
                                       rccBookingHistory?.sort((a, b) {
-                                        var adate = format.parse(a
-                                            .castingDate!); //before -> var adate = a.expiry;
-                                        var bdate = format.parse(b
-                                            .castingDate!); //var bdate = b.expiry;
+                                        var adate = format.parse(
+                                          a.castingDate!,
+                                        ); //before -> var adate = a.expiry;
+                                        var bdate = format.parse(
+                                          b.castingDate!,
+                                        ); //var bdate = b.expiry;
                                         return bdate.compareTo(adate);
                                       });
                                     }
                                   });
                                 },
                                 child: Container(
-                                    padding: const EdgeInsets.only(top: 13),
-                                    height: 40,
+                                  alignment: Alignment.center,
+                                  height: 40,
+                                  decoration: BoxDecoration(
                                     color: flagSortBy == true
                                         ? Colors.black
-                                        : Colors.white,
-                                    child: Text(
-                                      'Sort By Recent',
-                                      style: flagSortBy == true
-                                          ? const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold)
-                                          : const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold),
-                                      textAlign: TextAlign.center,
-                                    ))),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  if (flagSortBy == true) {
-                                    flagSortBy = false;
-                                    getLeadFilter();
-                                    rccBookingHistory?.sort((a, b) {
-                                      var adate = a
-                                          .poNo!; //before -> var adate = a.expiry;
-                                      var bdate =
-                                          b.poNo!; //var bdate = b.expiry;
-                                      return adate.compareTo(bdate);
-                                    });
-                                  }
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.only(top: 13),
-                                height: 40,
-                                color: flagSortBy == false
-                                    ? Colors.black
-                                    : Colors.white,
-                                child: Text(
-                                  'Sort By P.O. No.',
-                                  style: flagSortBy == false
-                                      ? const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold)
-                                      : const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold),
-                                  textAlign: TextAlign.center,
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    'Sort By Recent',
+                                    style: flagSortBy == true
+                                        ? const TextStyle(
+                                            fontFamily: supplyFontFamily,
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          )
+                                        : const TextStyle(
+                                            fontFamily: supplyFontFamily,
+                                            color: Colors.black,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    if (flagSortBy == true) {
+                                      flagSortBy = false;
+                                      getLeadFilter();
+                                      rccBookingHistory?.sort((a, b) {
+                                        var adate = a
+                                            .poNo!; //before -> var adate = a.expiry;
+                                        var bdate =
+                                            b.poNo!; //var bdate = b.expiry;
+                                        return adate.compareTo(bdate);
+                                      });
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: flagSortBy == false
+                                        ? Colors.black
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    'Sort By P.O. No.',
+                                    style: flagSortBy == false
+                                        ? const TextStyle(
+                                            fontFamily: supplyFontFamily,
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          )
+                                        : const TextStyle(
+                                            fontFamily: supplyFontFamily,
+                                            color: Colors.black,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        color: Colors.black,
-                      ),
-                      verticalSpaceSmall,
+                      const SizedBox(height: 4),
                       Padding(
-                        padding: const EdgeInsets.only(
-                            left: 60.0, right: 60, top: 5.0),
+                        padding: EdgeInsets.only(
+                          left: supplyCompact(context) ? 12 : 60,
+                          right: supplyCompact(context) ? 12 : 60,
+                        ),
                         child: SizedBox(
-                          height: 40,
+                          height: 34,
                           child: TextField(
                             onChanged: (value) {
                               Future.delayed(const Duration(seconds: 1), () {
@@ -1146,37 +1215,65 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                   rccBookingHistory = [];
                                   editingController.clear();
                                   fetchPoStatusOfSupply();
-                                  FocusScope.of(context)
-                                      .requestFocus(FocusNode());
+                                  FocusScope.of(
+                                    context,
+                                  ).requestFocus(FocusNode());
                                 }
                               });
                             },
-                            style: const TextStyle(fontSize: 13),
+                            style: const TextStyle(
+                                fontFamily: supplyFontFamily, fontSize: 11),
                             controller: editingController,
                             decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.all(12.0),
-                                labelText: "Search by PO.No or Vendor Name",
-                                hintText: "Search by PO.No or Vendor Name",
-                                prefixIcon: Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(
-                                        Radius.circular(25.0)))),
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 7),
+                              labelText: "Search by PO.No or Vendor Name",
+                              hintText: "Search by PO.No or Vendor Name",
+                              labelStyle: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontSize: 11,
+                                  color: Color(0xffa0a5ab)),
+                              hintStyle: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontSize: 11,
+                                  color: Color(0xffa0a5ab)),
+                              floatingLabelStyle: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontSize: 11,
+                                  color: Color(0xffa0a5ab)),
+                              prefixIcon: Icon(Icons.search,
+                                  size: 17, color: Color(0xffa0a5ab)),
+                              prefixIconConstraints:
+                                  BoxConstraints(minWidth: 34, minHeight: 32),
+                              border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(25)),
+                                  borderSide:
+                                      BorderSide(color: Color(0xffe1e5e9))),
+                              enabledBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(25)),
+                                  borderSide:
+                                      BorderSide(color: Color(0xffe1e5e9))),
+                              focusedBorder: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(25)),
+                                  borderSide:
+                                      BorderSide(color: Color(0xffb8bec5))),
+                            ),
                           ),
                         ),
                       ),
-                      verticalSpaceSmall,
-                      const Divider(
-                        height: 0.5,
-                        thickness: 0.5,
-                        indent: 1,
-                        endIndent: 1,
-                        color: Colors.black,
-                      ),
+                      const SizedBox(height: 4),
                       norecord == true
                           ? const Expanded(
                               child: Center(
-                                  child: Text('No Record Found',
-                                      style: normalText)),
+                                child: Text(
+                                  'No Record Found',
+                                  style: normalText,
+                                ),
+                              ),
                             )
                           : Expanded(
                               child: SmartRefresher(
@@ -1190,7 +1287,8 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                 onLoading:
                                     searchTermValue.isEmpty ? _onLoading : null,
                                 footer: const ClassicFooter(
-                                    loadStyle: LoadStyle.ShowWhenLoading),
+                                  loadStyle: LoadStyle.ShowWhenLoading,
+                                ),
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 child: ListView.builder(
                                   itemCount: rccBookingHistory?.length,
@@ -1218,9 +1316,11 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                         i < orderDetails!.length;
                                         i++) {
                                       actualQty = double.parse(
-                                          orderDetails[i].orderQuantity!);
+                                        orderDetails[i].orderQuantity!,
+                                      );
                                       deliveredQty = double.parse(
-                                          orderDetails[i].deliveryQuantity!);
+                                        orderDetails[i].deliveryQuantity!,
+                                      );
                                       if (i == 0) {
                                         units =
                                             '${actualQty.toStringAsFixed(3)} ${orderDetails[i].castingUnitName!}';
@@ -1236,152 +1336,203 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                             '$grades, ${orderDetails[i].gradeTypeName!}';
                                       }
                                     }
-                                    return InkWell(
-                                      onTap: () {
-                                        var projectId = args.projectId!;
-                                        var projectName = args.projectName!;
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) {
-                                              return SuppliesPoDetails(
+                                    return _supplyCard(
+                                      rccBookingHistory![index],
+                                      child: InkWell(
+                                        onTap: () {
+                                          var projectId = args.projectId!;
+                                          var projectName = args.projectName!;
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) {
+                                                return SuppliesPoDetails(
                                                   projectId: projectId,
                                                   towarId:
                                                       args.response?.towarId ??
                                                           '',
                                                   projectName: projectName,
                                                   orderDetails:
-                                                      rccBookingHistory![
-                                                          index]);
-                                            },
-                                          ),
-                                        ).then((_) {
-                                          // This block runs when you have returned back to the 1st Page from 2nd.
-                                          setState(() {
-                                            // Call setState to refresh the page.
-                                            flagcalled = false;
-                                            offset = '0';
-                                            searchTermValue = '';
-                                            rccBookingHistory = [];
-                                            editingController.clear();
-                                            fetchPoStatusOfSupply();
+                                                      rccBookingHistory![index],
+                                                );
+                                              },
+                                            ),
+                                          ).then((_) {
+                                            // This block runs when you have returned back to the 1st Page from 2nd.
+                                            setState(() {
+                                              // Call setState to refresh the page.
+                                              flagcalled = false;
+                                              offset = '0';
+                                              searchTermValue = '';
+                                              rccBookingHistory = [];
+                                              editingController.clear();
+                                              fetchPoStatusOfSupply();
+                                            });
                                           });
-                                        });
-                                      },
-                                      child: ListTile(
-                                        trailing: const Padding(
-                                          padding: EdgeInsets.only(top: 200.0),
-                                          child:
-                                              Icon(Icons.keyboard_arrow_right),
-                                        ),
-                                        title: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            Padding(
-                                                padding: const EdgeInsets.only(
-                                                    left: 50, top: 10),
+                                        },
+                                        child: ListTile(
+                                          contentPadding: supplyCompact(context)
+                                              ? const EdgeInsets.symmetric(
+                                                  horizontal: 10, vertical: 8)
+                                              : null,
+                                          horizontalTitleGap:
+                                              supplyCompact(context) ? 4 : null,
+                                          titleAlignment:
+                                              ListTileTitleAlignment.top,
+                                          trailing: _supplyToggle(
+                                              rccBookingHistory![index]),
+                                          title: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  left: supplyCompact(context)
+                                                      ? 0
+                                                      : 50,
+                                                  top: 10,
+                                                ),
                                                 child: Column(
+                                                  key: _expandedSupplyCard ==
+                                                          _supplyCardId(
+                                                              rccBookingHistory![
+                                                                  index])
+                                                      ? null
+                                                      : ValueKey(
+                                                          'supply-minimised-${rccBookingHistory![index].orderId ?? rccBookingHistory![index].poNo}'),
                                                   children: [
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 6.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         children: [
                                                           const SizedBox(
                                                             width: 200,
                                                             child: Text(
-                                                                'P.O. No.',
-                                                                style:
-                                                                    normalText),
+                                                              'P.O. No.',
+                                                              style:
+                                                                  supplyCardLabel,
+                                                            ),
                                                           ),
                                                           horizontalSpaceMedium,
                                                           const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
+                                                            child: Icon(
+                                                              Icons.remove,
+                                                              color: Colors
+                                                                  .black54,
+                                                            ),
+                                                          ),
                                                           horizontalSpaceLarge,
-                                                          Text(
-                                                              rccBookingHistory![
-                                                                      index]
-                                                                  .poNo!,
-                                                              style: boldText),
-                                                          if (rccBookingHistory![
-                                                                      index]
-                                                                  .isStarMarked ==
-                                                              '1')
-                                                            Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left: 8),
-                                                              child: const Icon(
-                                                                Icons
-                                                                    .star_rounded,
-                                                                color:
-                                                                    Colors.red,
-                                                                size: 14,
-                                                              ),
-                                                            )
+                                                          FittedBox(
+                                                            fit: BoxFit
+                                                                .scaleDown,
+                                                            alignment: Alignment
+                                                                .centerLeft,
+                                                            child: Text.rich(
+                                                              TextSpan(
+                                                                  children: [
+                                                                    TextSpan(
+                                                                        text: rccBookingHistory![index]
+                                                                            .poNo!
+                                                                            .trim()),
+                                                                    if (rccBookingHistory![index]
+                                                                            .isStarMarked ==
+                                                                        '1')
+                                                                      const WidgetSpan(
+                                                                        alignment:
+                                                                            PlaceholderAlignment.middle,
+                                                                        child: Icon(
+                                                                            Icons
+                                                                                .star_rounded,
+                                                                            color:
+                                                                                Colors.red,
+                                                                            size: 14),
+                                                                      ),
+                                                                  ]),
+                                                              key: ValueKey(
+                                                                  'supply-po-number-${rccBookingHistory![index].orderId ?? rccBookingHistory![index].poNo}'),
+                                                              maxLines: 1,
+                                                              softWrap: false,
+                                                              style: supplyCardEmphasis.copyWith(
+                                                                  fontSize:
+                                                                      supplyCompact(
+                                                                              context)
+                                                                          ? 13
+                                                                          : 16),
+                                                            ),
+                                                          ),
                                                         ],
                                                       ),
                                                     ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 6.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'P.O. Created Date',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
                                                               rccBookingHistory![
                                                                       index]
                                                                   .poCreatedAt!,
                                                               style:
-                                                                  normalText),
-                                                        ],
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 6.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         mainAxisAlignment:
                                                             MainAxisAlignment
                                                                 .spaceBetween,
                                                         children: [
-                                                          Row(
+                                                          SupplyDetailRow(
                                                             children: [
                                                               const SizedBox(
                                                                 width: 200,
                                                                 child: Text(
-                                                                    'P.O. Status',
-                                                                    style:
-                                                                        normalText),
+                                                                  'P.O. Status',
+                                                                  style:
+                                                                      supplyCardLabel,
+                                                                ),
                                                               ),
                                                               horizontalSpaceMedium,
                                                               const Center(
-                                                                  child: Icon(
-                                                                      Icons
-                                                                          .remove,
-                                                                      color: Colors
-                                                                          .black54)),
+                                                                child: Icon(
+                                                                  Icons.remove,
+                                                                  color: Colors
+                                                                      .black54,
+                                                                ),
+                                                              ),
                                                               horizontalSpaceLarge,
                                                               Container(
                                                                 decoration:
@@ -1394,7 +1545,8 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                           255,
                                                                           214,
                                                                           51,
-                                                                          1.0)
+                                                                          1.0,
+                                                                        )
                                                                       : rccBookingHistory![index].poStatus! ==
                                                                               '1'
                                                                           ? const Color
@@ -1402,41 +1554,62 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                               255,
                                                                               214,
                                                                               51,
-                                                                              1.0)
+                                                                              1.0,
+                                                                            )
                                                                           : rccBookingHistory![index].poStatus! == '2'
-                                                                              ? const Color.fromRGBO(0, 128, 43, 1.0) //green
-                                                                              : const Color.fromRGBO(255, 214, 51, 1.0), // yellow
+                                                                              ? const Color.fromRGBO(
+                                                                                  0,
+                                                                                  128,
+                                                                                  43,
+                                                                                  1.0,
+                                                                                ) //green
+                                                                              : const Color.fromRGBO(
+                                                                                  255,
+                                                                                  214,
+                                                                                  51,
+                                                                                  1.0,
+                                                                                ), // yellow
                                                                   borderRadius:
                                                                       BorderRadius
                                                                           .circular(
-                                                                              5.0),
+                                                                    999,
+                                                                  ),
                                                                 ),
                                                                 child: Padding(
-                                                                  padding: const EdgeInsets
-                                                                      .only(
-                                                                      left:
-                                                                          15.0,
-                                                                      right:
-                                                                          15.0,
-                                                                      top: 5.0,
-                                                                      bottom:
-                                                                          5.0),
-                                                                  child: Text(
-                                                                      rccBookingHistory![index].poStatus! ==
-                                                                              '0'
-                                                                          ? 'Pending'
-                                                                          : rccBookingHistory![index].poStatus! == '1'
-                                                                              ? 'Assigned'
-                                                                              : rccBookingHistory![index].poStatus! == '2'
-                                                                                  ? 'Issued'
-                                                                                  : rccBookingHistory![index].poStatus! == '3'
-                                                                                      ? 'Dispute'
-                                                                                      : '---',
-                                                                      style: rccBookingHistory![index].poStatus! == '0'
-                                                                          ? boldText
-                                                                          : rccBookingHistory![index].poStatus! == '1'
-                                                                              ? boldText
-                                                                              : const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.0, color: Colors.white)),
+                                                                  padding:
+                                                                      const EdgeInsets
+                                                                          .only(
+                                                                    left: 15.0,
+                                                                    right: 15.0,
+                                                                    top: 5.0,
+                                                                    bottom: 5.0,
+                                                                  ),
+                                                                  child:
+                                                                      SingleChildScrollView(
+                                                                          scrollDirection: Axis
+                                                                              .horizontal,
+                                                                          child:
+                                                                              Text(
+                                                                            rccBookingHistory![index].poStatus! == '0'
+                                                                                ? 'Pending'
+                                                                                : rccBookingHistory![index].poStatus! == '1'
+                                                                                    ? 'Assigned'
+                                                                                    : rccBookingHistory![index].poStatus! == '2'
+                                                                                        ? 'Issued'
+                                                                                        : rccBookingHistory![index].poStatus! == '3'
+                                                                                            ? 'Dispute'
+                                                                                            : '---',
+                                                                            maxLines:
+                                                                                1,
+                                                                            softWrap:
+                                                                                false,
+                                                                            style:
+                                                                                supplyCardValue.copyWith(
+                                                                              fontSize: supplyCompact(context) ? 13 : 16,
+                                                                              fontWeight: FontWeight.bold,
+                                                                              color: rccBookingHistory![index].poStatus == '0' || rccBookingHistory![index].poStatus == '1' ? Colors.black : Colors.white,
+                                                                            ),
+                                                                          )),
                                                                 ),
                                                               ),
                                                             ],
@@ -1445,53 +1618,9 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                           index]
                                                                       .grn_active ==
                                                                   '1'
-                                                              ? InkWell(
-                                                                  onTap: () {
-                                                                    var projectId =
-                                                                        args.projectId!;
-                                                                    var projectName =
-                                                                        args.projectName!;
-                                                                    Navigator
-                                                                        .push(
-                                                                      context,
-                                                                      MaterialPageRoute(
-                                                                        builder:
-                                                                            (_) {
-                                                                          return GrnListingView(
-                                                                              projectId: projectId,
-                                                                              towarId: args.response?.towarId ?? '',
-                                                                              projectName: projectName,
-                                                                              orderId: rccBookingHistory![index].orderId!);
-                                                                        },
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                  child: Container(
-                                                                      height: 35,
-                                                                      width: 100,
-                                                                      decoration: BoxDecoration(
-                                                                        border: Border.all(
-                                                                            color:
-                                                                                Colors.grey),
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(10),
-                                                                        color: Colors
-                                                                            .white,
-                                                                        shape: BoxShape
-                                                                            .rectangle,
-                                                                      ),
-                                                                      child: const Center(
-                                                                        child:
-                                                                            Text(
-                                                                          'VIEW GRN',
-                                                                          style: TextStyle(
-                                                                              color: Colors.black,
-                                                                              fontWeight: FontWeight.w400),
-                                                                          textAlign:
-                                                                              TextAlign.center,
-                                                                        ),
-                                                                      )),
-                                                                )
+                                                              ? _supplyGrnButton(
+                                                                  rccBookingHistory![
+                                                                      index])
                                                               : const SizedBox(),
                                                         ],
                                                       ),
@@ -1499,56 +1628,66 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 6.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         children: [
                                                           const SizedBox(
                                                             width: 200,
                                                             child: Text(
-                                                                'Booking Type',
-                                                                style:
-                                                                    normalText),
+                                                              'Booking Type',
+                                                              style:
+                                                                  supplyCardLabel,
+                                                            ),
                                                           ),
                                                           horizontalSpaceMedium,
                                                           const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
+                                                            child: Icon(
+                                                              Icons.remove,
+                                                              color: Colors
+                                                                  .black54,
+                                                            ),
+                                                          ),
                                                           horizontalSpaceLarge,
                                                           Text(
-                                                              rccBookingHistory![
-                                                                      index]
-                                                                  .gradeName!,
-                                                              style:
-                                                                  normalText),
+                                                            rccBookingHistory![
+                                                                    index]
+                                                                .gradeName!,
+                                                            style:
+                                                                supplyCardValue,
+                                                          ),
                                                         ],
                                                       ),
                                                     ),
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 6.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         children: [
                                                           const SizedBox(
                                                             width: 200,
                                                             child: Text(
-                                                                'Status Delivery',
-                                                                style:
-                                                                    normalText),
+                                                              'Status Delivery',
+                                                              style:
+                                                                  supplyCardLabel,
+                                                            ),
                                                           ),
                                                           horizontalSpaceMedium,
                                                           const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
+                                                            child: Icon(
+                                                              Icons.remove,
+                                                              color: Colors
+                                                                  .black54,
+                                                            ),
+                                                          ),
                                                           horizontalSpaceLarge,
                                                           Container(
                                                             decoration:
                                                                 BoxDecoration(
-                                                              color: rccBookingHistory![index]
+                                                              color: rccBookingHistory![
+                                                                              index]
                                                                           .orderStatus! ==
                                                                       '0'
                                                                   ? const Color
@@ -1556,75 +1695,88 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                       255,
                                                                       214,
                                                                       51,
-                                                                      1.0) // yellow
-
+                                                                      1.0,
+                                                                    ) // yellow
                                                                   : rccBookingHistory![index].orderStatus! ==
                                                                               '1' ||
                                                                           rccBookingHistory![index].orderStatus! ==
                                                                               '4'
-                                                                      ? const Color.fromRGBO(
+                                                                      ? const Color
+                                                                          .fromRGBO(
                                                                           255,
                                                                           214,
                                                                           51,
-                                                                          1.0) //yellow
+                                                                          1.0,
+                                                                        ) //yellow
                                                                       : rccBookingHistory![index].orderStatus! ==
                                                                               '2'
-                                                                          ? const Color.fromRGBO(
+                                                                          ? const Color
+                                                                              .fromRGBO(
                                                                               0,
                                                                               128,
                                                                               43,
-                                                                              1.0) //green
-                                                                          : const Color.fromRGBO(
+                                                                              1.0,
+                                                                            ) //green
+                                                                          : const Color
+                                                                              .fromRGBO(
                                                                               255,
                                                                               51,
                                                                               0,
-                                                                              1.0), //yellow
+                                                                              1.0,
+                                                                            ), //yellow
                                                               borderRadius:
                                                                   BorderRadius
                                                                       .circular(
-                                                                          5.0),
+                                                                999,
+                                                              ),
                                                             ),
                                                             child: Padding(
                                                               padding:
                                                                   const EdgeInsets
-                                                                      .all(8.0),
-                                                              child: Text(
-                                                                  rccBookingHistory![index]
-                                                                              .orderStatus! ==
-                                                                          '0'
-                                                                      ? 'Order Pending'
-                                                                      : rccBookingHistory![index].orderStatus! ==
-                                                                              '1'
-                                                                          ? 'Order Processed'
-                                                                          : rccBookingHistory![index].orderStatus! ==
-                                                                                  '2'
-                                                                              ? 'Order Delivered'
-                                                                              : rccBookingHistory![index].orderStatus! ==
-                                                                                      '4'
-                                                                                  ? 'Partially Delivered'
-                                                                                  : 'Order Cancelled',
-                                                                  style: rccBookingHistory![index]
-                                                                              .orderStatus! ==
-                                                                          '0'
-                                                                      ? boldText
-                                                                      : rccBookingHistory![index].orderStatus! == '1' ||
-                                                                              rccBookingHistory![index].orderStatus! ==
-                                                                                  '4'
-                                                                          ? const TextStyle(
-                                                                              fontWeight: FontWeight
-                                                                                  .bold,
-                                                                              fontSize:
-                                                                                  14.0,
-                                                                              color: Colors
-                                                                                  .black)
-                                                                          : const TextStyle(
-                                                                              fontWeight: FontWeight.bold,
-                                                                              fontSize: 14.0,
-                                                                              color: Colors.white)),
+                                                                      .all(
+                                                                8.0,
+                                                              ),
+                                                              child:
+                                                                  SingleChildScrollView(
+                                                                      scrollDirection:
+                                                                          Axis
+                                                                              .horizontal,
+                                                                      child:
+                                                                          Text(
+                                                                        rccBookingHistory![index].orderStatus! ==
+                                                                                '0'
+                                                                            ? 'Order Pending'
+                                                                            : rccBookingHistory![index].orderStatus! == '1'
+                                                                                ? 'Order Processed'
+                                                                                : rccBookingHistory![index].orderStatus! == '2'
+                                                                                    ? 'Order Delivered'
+                                                                                    : rccBookingHistory![index].orderStatus! == '4'
+                                                                                        ? 'Partially Delivered'
+                                                                                        : 'Order Cancelled',
+                                                                        maxLines:
+                                                                            1,
+                                                                        softWrap:
+                                                                            false,
+                                                                        style: supplyCardValue
+                                                                            .copyWith(
+                                                                          fontSize: supplyCompact(context)
+                                                                              ? 13
+                                                                              : 16,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                          color: rccBookingHistory![index].orderStatus == '0' || rccBookingHistory![index].orderStatus == '1' || rccBookingHistory![index].orderStatus == '4'
+                                                                              ? Colors.black
+                                                                              : Colors.white,
+                                                                        ),
+                                                                      )),
                                                             ),
                                                           ),
-                                                          horizontalSpaceSmall,
-                                                          Text(
+                                                          if (rccBookingHistory![
+                                                                      index]
+                                                                  .orderStatus ==
+                                                              '2') ...[
+                                                            horizontalSpaceSmall,
+                                                            Text(
                                                               rccBookingHistory![
                                                                               index]
                                                                           .orderStatus! ==
@@ -1632,215 +1784,153 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                   ? '( ${rccBookingHistory![index].orderDeliverDate!} )'
                                                                   : '',
                                                               style:
-                                                                  normalText),
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
                                                         ],
                                                       ),
                                                     ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 6.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Vendor Name',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
-                                                              rccBookingHistory![
-                                                                      index]
-                                                                  .venderName!,
-                                                              style: boldText),
-                                                          const SizedBox(
-                                                              width: 18),
-                                                          InkWell(
-                                                            onTap: () {
-                                                              showDialog<void>(
-                                                                  barrierDismissible:
-                                                                      true,
-                                                                  context:
-                                                                      context,
-                                                                  builder:
-                                                                      (context) {
-                                                                    return AlertDialog(
-                                                                      shape:
-                                                                          RoundedRectangleBorder(
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(8), // Set radius to zero
-                                                                      ),
-                                                                      titlePadding: const EdgeInsets
-                                                                          .symmetric(
-                                                                          vertical:
-                                                                              10,
-                                                                          horizontal:
-                                                                              20),
-                                                                      actionsPadding: const EdgeInsets
-                                                                          .only(
-                                                                          bottom:
-                                                                              10,
-                                                                          left:
-                                                                              10,
-                                                                          right:
-                                                                              10),
-                                                                      contentPadding: const EdgeInsets
-                                                                          .symmetric(
-                                                                          horizontal:
-                                                                              16),
-                                                                      actionsAlignment:
-                                                                          MainAxisAlignment
-                                                                              .center,
-                                                                      title:
-                                                                          Text(
-                                                                        rccBookingHistory![index].venderName ??
-                                                                            '',
-                                                                        style:
-                                                                            const TextStyle(
-                                                                          fontSize:
-                                                                              16,
-                                                                          fontWeight:
-                                                                              FontWeight.w600,
-                                                                        ),
-                                                                        textAlign:
-                                                                            TextAlign.center,
-                                                                      ),
-                                                                      content: SizedBox(
-                                                                          height: 200,
-                                                                          child: SingleChildScrollView(
-                                                                            child:
-                                                                                Column(
-                                                                              children: [
-                                                                                for (int i = 0; i < rccBookingHistory![index].venderPhone!.length; i++)
-                                                                                  Column(
-                                                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                                                    children: [
-                                                                                      Text(
-                                                                                        rccBookingHistory![index].venderPhone?[i].venderName ?? '',
-                                                                                        style: const TextStyle(fontSize: 16),
-                                                                                      ),
-                                                                                      Text(
-                                                                                        rccBookingHistory![index].venderPhone?[i].venderPhoneNumber ?? '',
-                                                                                        style: const TextStyle(fontSize: 16),
-                                                                                      ),
-                                                                                      const Divider(),
-                                                                                    ],
-                                                                                  )
-                                                                              ],
-                                                                            ),
-                                                                          )),
-                                                                      actions: [
-                                                                        InkWell(
-                                                                          onTap:
-                                                                              () {
-                                                                            // Navigator.of(context).pop();
-                                                                            Navigator.of(context).pop();
-                                                                          },
-                                                                          child:
-                                                                              Container(
-                                                                            width:
-                                                                                250,
-                                                                            padding:
-                                                                                const EdgeInsets.symmetric(vertical: 4),
-                                                                            decoration:
-                                                                                BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(7)),
-                                                                            child:
-                                                                                const Text(
-                                                                              "Close",
-                                                                              style: TextStyle(
-                                                                                fontSize: 16,
-                                                                                fontWeight: FontWeight.w600,
-                                                                                color: Colors.white,
-                                                                              ),
-                                                                              textAlign: TextAlign.center,
-                                                                            ),
-                                                                          ),
-                                                                        ),
-                                                                      ],
-                                                                    );
-                                                                  });
-                                                            },
-                                                            child: Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(3),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            100),
-                                                                border: Border.all(
-                                                                    color: Colors
-                                                                        .black54),
-                                                              ),
-                                                              child: const Icon(
-                                                                Icons
-                                                                    .local_phone_outlined,
+                                                                    supplyCardLabel,
                                                               ),
                                                             ),
-                                                          )
-                                                        ],
+                                                            horizontalSpaceMedium,
+                                                            const Center(
+                                                              child: Icon(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            SupplyVendorValue(
+                                                                name: rccBookingHistory![
+                                                                            index]
+                                                                        .venderName ??
+                                                                    '',
+                                                                action: InkWell(
+                                                                  onTap: () {
+                                                                    _showVendorContacts(
+                                                                        rccBookingHistory![
+                                                                            index]);
+                                                                  },
+                                                                  child:
+                                                                      Container(
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(
+                                                                      3,
+                                                                    ),
+                                                                    decoration:
+                                                                        BoxDecoration(
+                                                                      borderRadius:
+                                                                          BorderRadius
+                                                                              .circular(
+                                                                        100,
+                                                                      ),
+                                                                      border:
+                                                                          Border
+                                                                              .all(
+                                                                        color: Colors
+                                                                            .black54,
+                                                                      ),
+                                                                    ),
+                                                                    child:
+                                                                        const Icon(
+                                                                      Icons
+                                                                          .local_phone_outlined,
+                                                                      size: 17,
+                                                                    ),
+                                                                  ),
+                                                                )),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Project Name',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
                                                               rccBookingHistory![
                                                                       index]
                                                                   .projectName!,
                                                               style:
-                                                                  normalText),
-                                                        ],
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Slab No',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
                                                               rccBookingHistory![
                                                                       index]
                                                                   .slabName!,
@@ -1849,131 +1939,166 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                       .ellipsis,
                                                               maxLines: 1,
                                                               style:
-                                                                  normalText),
-                                                        ],
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Requirement Date',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
-                                                              DateFormat('dd MMM yyyy').format(DateFormat(
-                                                                      'dd-MM-yyyy')
-                                                                  .parse(rccBookingHistory![
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
+                                                              DateFormat(
+                                                                'dd MMM yyyy',
+                                                              ).format(
+                                                                DateFormat(
+                                                                  'dd-MM-yyyy',
+                                                                ).parse(
+                                                                  rccBookingHistory![
                                                                           index]
                                                                       .castingDate!
-                                                                      .toString())),
+                                                                      .toString(),
+                                                                ),
+                                                              ),
                                                               style:
-                                                                  normalText),
-                                                        ],
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Requested By',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
                                                               rccBookingHistory![
                                                                       index]
                                                                   .raisedBy!,
                                                               style:
-                                                                  normalText),
-                                                        ],
+                                                                  supplyCardValue,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Verified By',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Container(
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: rccBookingHistory![
-                                                                              index]
-                                                                          .poApproveBy! !=
-                                                                      ''
-                                                                  ? const Color
-                                                                      .fromRGBO(
-                                                                      0,
-                                                                      122,
-                                                                      204,
-                                                                      1.0) //blue
-                                                                  : rccBookingHistory![index]
-                                                                              .poApproveBy! !=
-                                                                          '---'
-                                                                      ? const Color
-                                                                          .fromRGBO(
-                                                                          0,
-                                                                          122,
-                                                                          204,
-                                                                          1.0) //blue
-                                                                      : null,
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          5.0),
+                                                                    supplyCardLabel,
+                                                              ),
                                                             ),
-                                                            child: Padding(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .only(
-                                                                      left:
-                                                                          15.0,
-                                                                      right:
-                                                                          15.0,
-                                                                      top: 5.0,
-                                                                      bottom:
-                                                                          5.0),
-                                                              child: Text(
+                                                            horizontalSpaceMedium,
+                                                            const Center(
+                                                              child: Icon(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Container(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: rccBookingHistory![index]
+                                                                            .poApproveBy! !=
+                                                                        ''
+                                                                    ? const Color
+                                                                        .fromRGBO(
+                                                                        0,
+                                                                        122,
+                                                                        204,
+                                                                        1.0,
+                                                                      ) //blue
+                                                                    : rccBookingHistory![index].poApproveBy! !=
+                                                                            '---'
+                                                                        ? const Color
+                                                                            .fromRGBO(
+                                                                            0,
+                                                                            122,
+                                                                            204,
+                                                                            1.0,
+                                                                          ) //blue
+                                                                        : null,
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                  999,
+                                                                ),
+                                                              ),
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                  left: 15.0,
+                                                                  right: 15.0,
+                                                                  top: 5.0,
+                                                                  bottom: 5.0,
+                                                                ),
+                                                                child: Text(
                                                                   rccBookingHistory![
                                                                           index]
                                                                       .poApproveBy!,
@@ -1981,129 +2106,165 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                                               .poApproveBy! !=
                                                                           ''
                                                                       ? const TextStyle(
-                                                                          fontWeight: FontWeight
-                                                                              .bold,
+                                                                          fontFamily:
+                                                                              supplyFontFamily,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
                                                                           fontSize:
                                                                               14.0,
-                                                                          color: Colors
-                                                                              .white)
+                                                                          color:
+                                                                              Colors.white,
+                                                                        )
                                                                       : rccBookingHistory![index].poApproveBy! !=
                                                                               '---'
                                                                           ? const TextStyle(
+                                                                              fontFamily: supplyFontFamily,
                                                                               fontWeight: FontWeight.bold,
                                                                               fontSize: 14.0,
-                                                                              color: Colors.white)
-                                                                          : normalText),
+                                                                              color: Colors.white,
+                                                                            )
+                                                                          : supplyCardValue,
+                                                                ),
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
                                                     if (rccBookingHistory![
                                                                 index]
                                                             .poCheckedBy !=
                                                         "")
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                bottom: 10.0),
-                                                        child: Row(
-                                                          children: [
-                                                            const SizedBox(
-                                                              width: 200,
-                                                              child: Text(
+                                                      if (_expandedSupplyCard ==
+                                                          _supplyCardId(
+                                                              rccBookingHistory![
+                                                                  index]))
+                                                        Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                            bottom: 10.0,
+                                                          ),
+                                                          child:
+                                                              SupplyDetailRow(
+                                                            children: [
+                                                              const SizedBox(
+                                                                width: 200,
+                                                                child: Text(
                                                                   'Checked By',
                                                                   style:
-                                                                      normalText),
-                                                            ),
-                                                            horizontalSpaceMedium,
-                                                            const Center(
+                                                                      supplyCardLabel,
+                                                                ),
+                                                              ),
+                                                              horizontalSpaceMedium,
+                                                              const Center(
                                                                 child: Icon(
-                                                                    Icons
-                                                                        .remove,
-                                                                    color: Colors
-                                                                        .black54)),
-                                                            horizontalSpaceLarge,
-                                                            Text(
+                                                                  Icons.remove,
+                                                                  color: Colors
+                                                                      .black54,
+                                                                ),
+                                                              ),
+                                                              horizontalSpaceLarge,
+                                                              Text(
                                                                 rccBookingHistory![
                                                                             index]
                                                                         .poCheckedBy ??
                                                                     '',
                                                                 style:
                                                                     const TextStyle(
+                                                                  fontFamily:
+                                                                      supplyFontFamily,
                                                                   fontSize:
                                                                       16.0,
                                                                   color: Colors
                                                                       .black,
-                                                                )),
-                                                            if (rccBookingHistory![
-                                                                        index]
-                                                                    .poCheckedByDate !=
-                                                                '')
-                                                              Text(
-                                                                '  (${rccBookingHistory![index].poCheckedByDate})',
+                                                                ),
+                                                              ),
+                                                              if (rccBookingHistory![
+                                                                          index]
+                                                                      .poCheckedByDate !=
+                                                                  '')
+                                                                Text(
+                                                                  '  (${rccBookingHistory![index].poCheckedByDate})',
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontFamily:
+                                                                        supplyFontFamily,
+                                                                    fontSize:
+                                                                        16,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
+                                                                'Received By',
                                                                 style:
-                                                                    const TextStyle(
-                                                                        fontSize:
-                                                                            16),
-                                                              )
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
+                                                              child: Icon(
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Text(
+                                                              rccBookingHistory![
+                                                                      index]
+                                                                  .checkedBy!,
+                                                              style:
+                                                                  supplyCardValue,
+                                                            ),
                                                           ],
                                                         ),
                                                       ),
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 10.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         children: [
                                                           const SizedBox(
                                                             width: 200,
                                                             child: Text(
-                                                                'Received By',
-                                                                style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Text(
-                                                              rccBookingHistory![
-                                                                      index]
-                                                                  .checkedBy!,
+                                                              'PO Quantity',
                                                               style:
-                                                                  normalText),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
-                                                                'PO Quantity',
-                                                                style:
-                                                                    normalText),
+                                                                  supplyCardLabel,
+                                                            ),
                                                           ),
                                                           horizontalSpaceMedium,
                                                           const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
+                                                            child: Icon(
+                                                              Icons.remove,
+                                                              color: Colors
+                                                                  .black54,
+                                                            ),
+                                                          ),
                                                           horizontalSpaceLarge,
                                                           Flexible(
-                                                            child: Text(units,
-                                                                style:
-                                                                    normalText),
+                                                            child: Text(
+                                                              units,
+                                                              style:
+                                                                  supplyCardValue,
+                                                            ),
                                                           ),
                                                         ],
                                                       ),
@@ -2111,68 +2272,88 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
+                                                        bottom: 10.0,
+                                                      ),
+                                                      child: SupplyDetailRow(
                                                         children: [
                                                           const SizedBox(
                                                             width: 200,
                                                             child: Text(
-                                                                'Delivered Quantity',
-                                                                style:
-                                                                    normalText),
+                                                              'Delivered Quantity',
+                                                              style:
+                                                                  supplyCardLabel,
+                                                            ),
                                                           ),
                                                           horizontalSpaceMedium,
                                                           const Center(
-                                                              child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
+                                                            child: Icon(
+                                                              Icons.remove,
+                                                              color: Colors
+                                                                  .black54,
+                                                            ),
+                                                          ),
                                                           horizontalSpaceLarge,
                                                           Flexible(
-                                                            child: Text(deliver,
-                                                                style:
-                                                                    normalText),
+                                                            child: Text(
+                                                              deliver,
+                                                              style: supplyCardValue.copyWith(
+                                                                  color: Colors
+                                                                      .blue,
+                                                                  decoration:
+                                                                      TextDecoration
+                                                                          .underline,
+                                                                  decorationColor:
+                                                                      Colors
+                                                                          .blue),
+                                                            ),
                                                           ),
                                                         ],
                                                       ),
                                                     ),
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 10.0),
-                                                      child: Row(
-                                                        children: [
-                                                          const SizedBox(
-                                                            width: 200,
-                                                            child: Text(
+                                                    if (_expandedSupplyCard ==
+                                                        _supplyCardId(
+                                                            rccBookingHistory![
+                                                                index]))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          bottom: 10.0,
+                                                        ),
+                                                        child: SupplyDetailRow(
+                                                          children: [
+                                                            const SizedBox(
+                                                              width: 200,
+                                                              child: Text(
                                                                 'Grades',
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                          horizontalSpaceMedium,
-                                                          const Center(
+                                                                    supplyCardLabel,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceMedium,
+                                                            const Center(
                                                               child: Icon(
-                                                                  Icons.remove,
-                                                                  color: Colors
-                                                                      .black54)),
-                                                          horizontalSpaceLarge,
-                                                          Flexible(
-                                                            child: Text(grades,
+                                                                Icons.remove,
+                                                                color: Colors
+                                                                    .black54,
+                                                              ),
+                                                            ),
+                                                            horizontalSpaceLarge,
+                                                            Flexible(
+                                                              child: Text(
+                                                                grades,
                                                                 style:
-                                                                    normalText),
-                                                          ),
-                                                        ],
+                                                                    supplyCardValue,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
                                                   ],
-                                                )),
-                                            verticalSpaceSmall15,
-                                            const Divider(
-                                              height: 1,
-                                              thickness: 0.5,
-                                              color: Colors.black,
-                                            ),
-                                          ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     );
@@ -2197,6 +2378,8 @@ class _StatusOfSupplyViewState extends State<StatusOfSupplyView> {
                   ),
             // const Center(child: CircularProgressIndicator())
           ),
-        ));
+        ),
+      ),
+    );
   }
 }

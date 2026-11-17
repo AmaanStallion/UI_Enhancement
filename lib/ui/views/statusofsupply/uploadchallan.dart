@@ -1,3 +1,5 @@
+import 'supply_preview.dart';
+import 'supply_style.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -54,6 +56,14 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
   TextEditingController _txtRemarkController = TextEditingController();
 
   Future<ResponseGetPoChallanList?> wsGetPoChallanOrderList() async {
+    if (useSupplyTestData) {
+      setState(() {
+        flagcalled = true;
+        challanReportList = [];
+        count = 1;
+      });
+      return null;
+    }
     final SharedPreferences prefs = await _prefs;
     String? userId = prefs.getString('mobileNo');
 
@@ -73,8 +83,10 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
       print(data);
     }
 
-    var response =
-        await apiNetworkHandler.post(AppUrl.webgetPoChallanListFromJson, data);
+    var response = await apiNetworkHandler.post(
+      AppUrl.webgetPoChallanListFromJson,
+      data,
+    );
     if (kDebugMode) {
       print(response.statusCode);
     }
@@ -99,9 +111,12 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
   }
 
   submitUploadChallan() async {
+    if (supplyPreviewAction(context)) return;
     //for multipartrequest
-    var request =
-        http.MultipartRequest('POST', Uri.parse(AppUrl.webUploadPoChallan));
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse(AppUrl.webUploadPoChallan),
+    );
 
     //for token
     request.headers.addAll({"Authorization": "Bearer token"});
@@ -122,8 +137,9 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
       print(file.size);
       print(file.extension);
       print(file.path);
-      request.files.add(await http.MultipartFile.fromPath(
-          "chalanreport", file.path.toString()));
+      request.files.add(
+        await http.MultipartFile.fromPath("chalanreport", file.path.toString()),
+      );
     }
     //for completeing the request
     var response = await request.send();
@@ -137,34 +153,47 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
     if (response.statusCode == 200) {
       Future.delayed(Duration.zero).then((_) {
         Navigator.pop(dialogContext);
-        showDialog<String>(
-            context: context,
-            builder: (BuildContext context) => AlertDialog(
-                  title: const Text(''),
-                  content: const Text('Uploaded successfully',
-                      style: TextStyle(
-                          fontStyle: FontStyle.normal, fontSize: 17.0)),
-                  actions: <Widget>[
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          fixedSize: const Size.fromWidth(100),
-                          padding: const EdgeInsets.all(10),
-                          textStyle: const TextStyle(color: Colors.white)),
-                      child: const Text('CLOSE',
-                          style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              fontSize: 14.0,
-                              color: Colors.white)),
-                      onPressed: () {
-                        setState(() {
-                          Navigator.pop(context);
-                          Navigator.maybePop(context);
-                        });
-                      },
-                    ),
-                  ],
-                ));
+        showSupplyDialog<String>(
+          context: context,
+          builder: (BuildContext context) => SupplyConfirmationDialog(
+            actionsAlignment: MainAxisAlignment.center,
+            title: const Text('Upload Challan'),
+            content: const Text(
+              'Uploaded successfully',
+              style: TextStyle(
+                  fontFamily: supplyFontFamily,
+                  fontStyle: FontStyle.normal,
+                  fontSize: 13,
+                  height: 1.4),
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  fixedSize: const Size.fromWidth(100),
+                  padding: const EdgeInsets.all(10),
+                  textStyle: const TextStyle(
+                      fontFamily: supplyFontFamily, color: Colors.white),
+                ),
+                child: const Text(
+                  'CLOSE',
+                  style: TextStyle(
+                    fontFamily: supplyFontFamily,
+                    fontWeight: FontWeight.normal,
+                    fontSize: 14.0,
+                    color: Colors.white,
+                  ),
+                ),
+                onPressed: () {
+                  setState(() {
+                    Navigator.pop(context);
+                    Navigator.maybePop(context);
+                  });
+                },
+              ),
+            ],
+          ),
+        );
       });
     } else {
       if (kDebugMode) {
@@ -180,629 +209,517 @@ class _UploadChallanofPoState extends State<UploadChallanofPo> {
   }
 
   @override
+  void dispose() {
+    _txtRemarkController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickChallan() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      arrayFilesBytes.add(result.files.first.bytes);
+      arrayFiles.add(result.files.first);
+    });
+  }
+
+  Widget _formPanel(Widget child) => Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: EdgeInsets.all(supplyCompact(context) ? 12 : 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xffe1e5e9)),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x10000000), blurRadius: 10, offset: Offset(0, 3))
+          ],
+        ),
+        child: child,
+      );
+
+  Widget _uploadForm() {
+    final compact = supplyCompact(context);
+    final tileSize = compact ? 96.0 : 120.0;
+    final labelStyle = TextStyle(
+        fontFamily: supplyFontFamily,
+        fontSize: compact ? 12 : 14,
+        fontWeight: FontWeight.w600,
+        color: Colors.black87);
+    return _formPanel(
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+          width: tileSize,
+          child: Column(children: [
+            Text('Attach Challan', style: labelStyle),
+            const SizedBox(height: 10),
+            Container(
+              width: tileSize,
+              height: tileSize,
+              decoration: BoxDecoration(
+                  color: const Color(0xfff8f9fa),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xffdce1e6))),
+              child: arrayFiles.isEmpty
+                  ? IconButton(
+                      key: const ValueKey('challan-attach'),
+                      tooltip: 'Attach Challan',
+                      icon: const Icon(Icons.add_circle_outline_rounded),
+                      iconSize: compact ? 32 : 40,
+                      color: Colors.black,
+                      onPressed: _pickChallan,
+                    )
+                  : _imagePdf(arrayFiles.first, 0),
+            ),
+          ])),
+      SizedBox(width: compact ? 12 : 20),
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Remarks', style: labelStyle),
+        const SizedBox(height: 10),
+        SizedBox(
+            height: 120,
+            child: TextField(
+              key: const ValueKey('challan-remarks'),
+              controller: _txtRemarkController,
+              maxLines: null,
+              expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: TextStyle(
+                  fontFamily: supplyFontFamily,
+                  fontSize: compact ? 12 : 14,
+                  color: Colors.black87),
+              onChanged: (value) => strChallanRemarks = value,
+              decoration: InputDecoration(
+                isDense: true,
+                filled: true,
+                fillColor: const Color(0xfff8f9fa),
+                hintText: 'Add Challan Review/Comments',
+                hintStyle: TextStyle(
+                    fontFamily: supplyFontFamily,
+                    fontSize: compact ? 12 : 14,
+                    color: const Color(0xff9ca3ab),
+                    fontWeight: FontWeight.w400),
+                contentPadding: const EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xffe1e5e9))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xffe1e5e9))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xffb8bec5))),
+              ),
+            )),
+      ])),
+    ]));
+  }
+
+  Widget _savedChallan(int index) {
+    final report = challanReportList![index - 1];
+    final compact = supplyCompact(context);
+    final tileSize = compact ? 80.0 : 120.0;
+    final date = report.poChallanCretatedAt;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () {
+        final file = report.poChallanReport ?? '';
+        if (file.split('.').last == 'pdf') {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => PdfViewer(
+                      fileName: file,
+                      fileUrl: '${AppUrl.globalPoChallanUrl}$file')));
+        } else {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ImagePreviewViewer(
+                      fileName: file,
+                      fileUrl: '${AppUrl.globalPoChallanUrl}$file')));
+        }
+      },
+      child: _formPanel(
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+            width: tileSize,
+            height: tileSize,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+                color: const Color(0xfff8f9fa),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xffe1e5e9))),
+            child: _imagePdfFromUrl(index)),
+        SizedBox(width: compact ? 12 : 20),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+                child: Text('Remarks',
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: compact ? 12 : 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87))),
+            const SizedBox(width: 6),
+            Flexible(
+                child: Text(
+                    date == null ? '' : DateFormat('dd MMM yyyy').format(date),
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                        fontFamily: supplyFontFamily,
+                        fontSize: compact ? 11 : 13,
+                        color: Colors.black54))),
+          ]),
+          const SizedBox(height: 10),
+          Text(report.poChallanRemarks ?? '',
+              maxLines: 5,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontFamily: supplyFontFamily,
+                  fontSize: compact ? 12 : 14,
+                  color: Colors.black87)),
+        ])),
+      ])),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final compact = supplyCompact(context);
+    return SupplySurface(
+        child: Scaffold(
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
         title: Text(widget.projectName!.toUpperCase(),
-            style:
-                const TextStyle(fontStyle: FontStyle.normal, fontSize: 17.0)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontFamily: supplyFontFamily,
+                fontSize: compact ? 14 : 17,
+                fontWeight: FontWeight.w600)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.maybePop(context);
-          },
-        ),
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.maybePop(context)),
       ),
       body: SafeArea(
-          child: flagcalled == true
+          child: flagcalled
               ? Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 12, bottom: 12),
-                      child: Center(child: Text('UPLOAD CHALLAN')),
-                    ),
-                    const Divider(
-                      height: 1,
-                      thickness: 0.5,
-                      indent: 1,
-                      endIndent: 1,
-                      color: Colors.black,
-                    ),
                     const SizedBox(
-                      height: 20,
-                    ),
+                        height: 40,
+                        child: Center(
+                            child: Text('UPLOAD CHALLAN',
+                                style: TextStyle(
+                                    fontFamily: supplyFontFamily,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500)))),
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 30.0, right: 30),
                         child: ListView.builder(
-                            itemCount: count,
-                            itemBuilder: (context, index) {
-                              String dateRequired = '';
-                              if (index != 0) {
-                                String dateStart = challanReportList![index - 1]
-                                    .poChallanCretatedAt!
-                                    .toString();
-                                DateFormat inputFormat =
-                                    DateFormat('yyyy-MM-dd hh:mm:ss');
-                                DateTime input = inputFormat.parse(dateStart);
-                                dateRequired =
-                                    DateFormat('dd MMM yyyy').format(input);
-                              }
+                      padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 12 : 40, vertical: 12),
+                      itemCount: count,
+                      itemBuilder: (context, index) =>
+                          index == 0 ? _uploadForm() : _savedChallan(index),
+                    )),
+                    GestureDetector(
+                      key: const ValueKey('challan-submit'),
+                      onTap: () {
+                        if (arrayFiles.isEmpty) {
+                          showSupplyDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) =>
+                                SupplyConfirmationDialog(
+                              actionsAlignment: MainAxisAlignment.center,
+                              title: const Text('Upload Challan'),
+                              content: const Text(
+                                'Please upload delivery challan file.',
+                                style: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontStyle: FontStyle.normal,
+                                  fontSize: 14,
+                                  height: 1.4,
+                                ),
+                              ),
+                              actions: <Widget>[
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    fixedSize: const Size(100, 32),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: VisualDensity.standard,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    textStyle: const TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'CLOSE',
+                                    style: TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 14.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      Navigator.pop(context);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        } else if (strChallanRemarks == '') {
+                          showSupplyDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) =>
+                                SupplyConfirmationDialog(
+                              actionsAlignment: MainAxisAlignment.center,
+                              title: const Text('Upload Challan'),
+                              content: const Text(
+                                'Please fill challan remark/comments field.',
+                                style: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontStyle: FontStyle.normal,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                              actions: <Widget>[
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    fixedSize: const Size.fromWidth(100),
+                                    padding: const EdgeInsets.all(10),
+                                    textStyle: const TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'CLOSE',
+                                    style: TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 14.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      Navigator.pop(context);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          showSupplyDialog<String>(
+                            context: context,
+                            builder: (BuildContext context) =>
+                                SupplyConfirmationDialog(
+                              title: const Text('Upload Challan'),
+                              content: const Text(
+                                'Are you sure you want to submit this delivery challan?',
+                                style: TextStyle(
+                                  fontFamily: supplyFontFamily,
+                                  fontStyle: FontStyle.normal,
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                              ),
+                              actions: <Widget>[
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    fixedSize: const Size.fromWidth(100),
+                                    padding: const EdgeInsets.all(10),
+                                    textStyle: const TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'NO',
+                                    style: TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 16.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      Navigator.pop(context);
+                                    });
+                                  },
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    fixedSize: const Size.fromWidth(100),
+                                    padding: const EdgeInsets.all(10),
+                                    textStyle: const TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'YES',
+                                    style: TextStyle(
+                                      fontFamily: supplyFontFamily,
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 14.0,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    if (useSupplyTestData) {
+                                      Navigator.pop(context);
+                                      supplyPreviewAction(this.context);
+                                      return;
+                                    }
 
-                              return index == 0
-                                  ? Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                          children: [
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  top: 10.0),
-                                              child: Column(
-                                                children: [
-                                                  const Center(
-                                                      child: Text(
-                                                    'Attach Challan',
-                                                    style: boldText,
-                                                  )),
-                                                  verticalSpaceSmall,
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            right: 10.0,
-                                                            left: 10.0),
-                                                    child: Container(
-                                                      height: 120,
-                                                      width: 120,
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(5),
-                                                        color: Colors.white,
-                                                        border: Border.all(
-                                                          color: Colors
-                                                              .black54, // red as border color
-                                                        ),
-                                                      ),
-                                                      child: arrayFiles.isEmpty
-                                                          ? IconButton(
-                                                              iconSize: 50,
-                                                              icon: const Icon(
-                                                                Icons
-                                                                    .add_circle_outlined,
-                                                              ),
-                                                              color:
-                                                                  Colors.black,
-                                                              onPressed:
-                                                                  () async {
-                                                                FilePickerResult?
-                                                                    result =
-                                                                    await FilePicker
-                                                                        .platform
-                                                                        .pickFiles(
-                                                                  type: FileType
-                                                                      .custom,
-                                                                  allowedExtensions: [
-                                                                    'pdf',
-                                                                    'jpg',
-                                                                    'jpeg',
-                                                                    'png'
-                                                                  ],
-                                                                );
-                                                                if (result !=
-                                                                    null) {
-                                                                  PlatformFile
-                                                                      file =
-                                                                      result
-                                                                          .files
-                                                                          .first;
-                                                                  print(
-                                                                      "FILE SELECTED");
-                                                                  print(file
-                                                                      .name);
-                                                                  print(file
-                                                                      .bytes);
-                                                                  print(file
-                                                                      .size);
-                                                                  print(file
-                                                                      .extension);
-                                                                  print(file
-                                                                      .path);
-                                                                  Uint8List?
-                                                                      fileBytes =
-                                                                      result
-                                                                          .files
-                                                                          .first
-                                                                          .bytes;
-                                                                  String
-                                                                      fileName =
-                                                                      result
-                                                                          .files
-                                                                          .first
-                                                                          .name;
-                                                                  setState(() {
-                                                                    arrayFilesBytes
-                                                                        .add(
-                                                                            fileBytes);
-                                                                    arrayFiles
-                                                                        .add(
-                                                                            file);
-                                                                  });
-                                                                } else {
-                                                                  // User canceled the picker
-                                                                }
-                                                              },
-                                                            )
-                                                          : _imagePdf(
-                                                              arrayFiles[index],
-                                                              index - 1),
-                                                    ),
-                                                  ),
-                                                  verticalSpaceSmall,
-                                                ],
-                                              ),
-                                            ),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                    left: 10.0, right: 10),
+                                    setState(() {
+                                      Navigator.pop(context);
+
+                                      showSupplyDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (BuildContext context) {
+                                          dialogContext = context;
+                                          return Center(
+                                            child: SizedBox(
+                                              height: 200,
+                                              width: 200,
+                                              child: Dialog(
                                                 child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    const Text(
-                                                      'Remarks',
-                                                      style: boldText,
-                                                    ),
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: const [
                                                     verticalSpaceSmall,
-                                                    Container(
-                                                      height: 120.0,
-                                                      decoration: BoxDecoration(
-                                                          color:
-                                                              kcTextFieldColor,
-                                                          border: Border.all(
-                                                            color: Colors.grey,
-                                                          ),
-                                                          borderRadius:
-                                                              const BorderRadius
-                                                                  .all(Radius
-                                                                      .circular(
-                                                                          5.0))),
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                left: 10.0,
-                                                                right: 10.0),
-                                                        child: TextField(
-                                                            maxLines: 10,
-                                                            enabled: true,
-                                                            controller:
-                                                                _txtRemarkController,
-                                                            style:
-                                                                const TextStyle(
-                                                                    color: Colors
-                                                                        .black,
-                                                                    fontSize:
-                                                                        15.0),
-                                                            decoration:
-                                                                const InputDecoration(
-                                                              contentPadding:
-                                                                  EdgeInsets.symmetric(
-                                                                      vertical:
-                                                                          18.0),
-                                                              border:
-                                                                  InputBorder
-                                                                      .none,
-                                                              hintText:
-                                                                  'Add Challan Review/Comments',
-                                                            ),
-                                                            onChanged:
-                                                                (String str) {
-                                                              strChallanRemarks =
-                                                                  str;
-                                                            }),
-                                                      ),
-                                                    ),
+                                                    CircularProgressIndicator(),
+                                                    verticalSpaceSmall,
+                                                    Text("Loading"),
+                                                    verticalSpaceSmall,
                                                   ],
                                                 ),
                                               ),
                                             ),
-                                          ],
-                                        ),
-                                        verticalSpaceSmall,
-                                        const Divider(
-                                          height: 0.5,
-                                          thickness: 0.5,
-                                          indent: 1,
-                                          endIndent: 1,
-                                          color: Colors.black,
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      children: [
-                                        InkWell(
-                                          onTap: () {
-                                            challanReportList![index - 1]
-                                                        .poChallanReport!
-                                                        .split(".")
-                                                        .last ==
-                                                    'pdf'
-                                                ? Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) {
-                                                        return PdfViewer(
-                                                          fileName:
-                                                              challanReportList![
-                                                                      index - 1]
-                                                                  .poChallanReport!,
-                                                          fileUrl:
-                                                              '${AppUrl.globalPoChallanUrl}${challanReportList![index - 1].poChallanReport!}',
-                                                        );
-                                                      },
-                                                    ),
-                                                  )
-                                                : Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) {
-                                                        return ImagePreviewViewer(
-                                                          fileName:
-                                                              challanReportList![
-                                                                      index - 1]
-                                                                  .poChallanReport!,
-                                                          fileUrl:
-                                                              '${AppUrl.globalPoChallanUrl}${challanReportList![index - 1].poChallanReport!}',
-                                                        );
-                                                      },
-                                                    ),
-                                                  );
-                                          },
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(
-                                                    top: 10.0),
-                                                child: Column(
-                                                  children: [
-                                                    verticalSpaceSmall,
-                                                    Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                                right: 10.0,
-                                                                left: 10.0),
-                                                        child: Container(
-                                                          height: 120,
-                                                          width: 120,
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        5),
-                                                            color: Colors.white,
-                                                            border: Border.all(
-                                                              color: Colors
-                                                                  .black54, // red as border color
-                                                            ),
-                                                          ),
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child:
-                                                                _imagePdfFromUrl(
-                                                                    index),
-                                                          ),
-                                                        )),
-                                                    verticalSpaceSmall,
-                                                  ],
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          top: 20.0,
-                                                          left: 10.0,
-                                                          right: 10),
-                                                  child: IntrinsicHeight(
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .start,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .spaceBetween,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            const Text(
-                                                              'Remarks',
-                                                              style: boldText,
-                                                            ),
-                                                            Text(dateRequired,
-                                                                style:
-                                                                    normalText),
-                                                          ],
-                                                        ),
-                                                        verticalSpaceSmall,
-                                                        Text(
-                                                            challanReportList![
-                                                                    index - 1]
-                                                                .poChallanRemarks!,
-                                                            maxLines: 5,
-                                                            style: normalText),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        verticalSpaceSmall,
-                                        const Divider(
-                                          height: 0.5,
-                                          thickness: 0.5,
-                                          indent: 1,
-                                          endIndent: 1,
-                                          color: Colors.black,
-                                        ),
-                                      ],
-                                    );
-                            }),
+                                          );
+                                        },
+                                      );
+
+                                      submitUploadChallan();
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        height: 42,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(999)),
+                        child: const Text(
+                          'SUBMIT',
+                          style: TextStyle(
+                            fontFamily: supplyFontFamily,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
-                    GestureDetector(
-                        onTap: () {
-                          if (arrayFiles.isEmpty) {
-                            showDialog<String>(
-                                context: context,
-                                builder: (BuildContext context) => AlertDialog(
-                                      title: const Text(''),
-                                      content: const Text(
-                                          'Please upload delivery challan file.',
-                                          style: TextStyle(
-                                              fontStyle: FontStyle.normal,
-                                              fontSize: 17.0)),
-                                      actions: <Widget>[
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.black,
-                                              fixedSize:
-                                                  const Size.fromWidth(100),
-                                              padding: const EdgeInsets.all(10),
-                                              textStyle: const TextStyle(
-                                                  color: Colors.white)),
-                                          child: const Text('CLOSE',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontSize: 14.0,
-                                                  color: Colors.white)),
-                                          onPressed: () {
-                                            setState(() {
-                                              Navigator.pop(context);
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ));
-                          } else if (strChallanRemarks == '') {
-                            showDialog<String>(
-                                context: context,
-                                builder: (BuildContext context) => AlertDialog(
-                                      title: const Text(''),
-                                      content: const Text(
-                                          'Please fill challan remark/comments field.',
-                                          style: TextStyle(
-                                              fontStyle: FontStyle.normal,
-                                              fontSize: 17.0)),
-                                      actions: <Widget>[
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.black,
-                                              fixedSize:
-                                                  const Size.fromWidth(100),
-                                              padding: const EdgeInsets.all(10),
-                                              textStyle: const TextStyle(
-                                                  color: Colors.white)),
-                                          child: const Text('CLOSE',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontSize: 14.0,
-                                                  color: Colors.white)),
-                                          onPressed: () {
-                                            setState(() {
-                                              Navigator.pop(context);
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ));
-                          } else {
-                            showDialog<String>(
-                                context: context,
-                                builder: (BuildContext context) => AlertDialog(
-                                      title: const Text('Upload Challan'),
-                                      content: const Text(
-                                          'Are you sure you want to submit this delivery challan?',
-                                          style: TextStyle(
-                                              fontStyle: FontStyle.normal,
-                                              fontSize: 17.0)),
-                                      actions: <Widget>[
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.black,
-                                              fixedSize:
-                                                  const Size.fromWidth(100),
-                                              padding: const EdgeInsets.all(10),
-                                              textStyle: const TextStyle(
-                                                  color: Colors.white)),
-                                          child: const Text('NO',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontSize: 16.0,
-                                                  color: Colors.white)),
-                                          onPressed: () {
-                                            setState(() {
-                                              Navigator.pop(context);
-                                            });
-                                          },
-                                        ),
-                                        ElevatedButton(
-                                          style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.black,
-                                              fixedSize:
-                                                  const Size.fromWidth(100),
-                                              padding: const EdgeInsets.all(10),
-                                              textStyle: const TextStyle(
-                                                  color: Colors.white)),
-                                          child: const Text('YES',
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontSize: 14.0,
-                                                  color: Colors.white)),
-                                          onPressed: () {
-                                            setState(() {
-                                              Navigator.pop(context);
-
-                                              showDialog(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder:
-                                                    (BuildContext context) {
-                                                  dialogContext = context;
-                                                  return Center(
-                                                    child: SizedBox(
-                                                      height: 200,
-                                                      width: 200,
-                                                      child: Dialog(
-                                                        child: Column(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .center,
-                                                          children: const [
-                                                            verticalSpaceSmall,
-                                                            CircularProgressIndicator(),
-                                                            verticalSpaceSmall,
-                                                            Text("Loading"),
-                                                            verticalSpaceSmall,
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              );
-
-                                              submitUploadChallan();
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ));
-                          }
-                        },
-                        child: Container(
-                            padding: const EdgeInsets.only(top: 13),
-                            height: 50,
-                            width: double.infinity,
-                            color: Colors.black,
-                            child: const Text(
-                              'SUBMIT',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
-                            ))),
                   ],
                 )
               : const Center(child: CircularProgressIndicator())),
-    );
+    ));
   }
 
-  Widget _imagePdf(PlatformFile file, int index) {
-    if (file.extension == 'pdf') {
-      return Stack(children: [
-        Container(
-            decoration: const BoxDecoration(
-                image: DecorationImage(
-                    image: AssetImage('images/projectmanagement/pdf.png'),
-                    fit: BoxFit.cover))),
-        Positioned(
-          top: -10,
-          left: 70,
-          height: 30,
-          width: 30,
-          child: IconButton(
-              onPressed: () {
-                setState(() {
-                  arrayFiles.removeAt(index);
-                });
-              },
-              icon: const Icon(Icons.close, color: Colors.red)),
-        ),
-      ]);
-    } else {
-      return Stack(children: [
-        Image.file(
-          File(
-            file.path!,
-          ),
-          width: 100.0,
-          height: 100.0,
-        ),
-        Positioned(
-          top: -10,
-          left: 70,
-          height: 30,
-          width: 30,
-          child: IconButton(
-              onPressed: () {
-                setState(() {
-                  arrayFiles.removeAt(index);
-                });
-              },
-              icon: const Icon(Icons.close, color: Colors.red)),
-        ),
-      ]);
-    }
-  }
+  Widget _imagePdf(PlatformFile file, int index) =>
+      LayoutBuilder(builder: (context, constraints) {
+        final pdf = file.extension?.toLowerCase() == 'pdf';
+        return Stack(fit: StackFit.expand, children: [
+          Padding(
+              padding: const EdgeInsets.all(8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: pdf
+                    ? Image.asset('images/projectmanagement/pdf.png',
+                        fit: BoxFit.contain)
+                    : file.bytes != null
+                        ? Image.memory(file.bytes!, fit: BoxFit.cover)
+                        : Image.file(File(file.path!), fit: BoxFit.cover),
+              )),
+          Positioned(
+              top: 0,
+              right: 0,
+              width: 28,
+              height: 28,
+              child: Container(
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xffe1e5e9))),
+                child: IconButton(
+                  key: const ValueKey('challan-remove'),
+                  tooltip: 'Remove attachment',
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.close_rounded,
+                      size: 17, color: Colors.black87),
+                  onPressed: () => setState(() {
+                    arrayFiles.removeAt(index);
+                    if (index < arrayFilesBytes.length)
+                      arrayFilesBytes.removeAt(index);
+                  }),
+                ),
+              )),
+        ]);
+      });
 
   Widget _imagePdfFromUrl(int index) {
     String file = challanReportList![index - 1].poChallanReport ?? '';
     if (file.contains('.pdf')) {
       return Container(
-          decoration: const BoxDecoration(
-              image: DecorationImage(
-                  image: AssetImage('images/projectmanagement/pdf.png'),
-                  fit: BoxFit.cover)));
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('images/projectmanagement/pdf.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
     } else {
       return Image.network(
-          '${AppUrl.globalPoChallanUrl}${challanReportList![index - 1].poChallanReport}');
+        '${AppUrl.globalPoChallanUrl}${challanReportList![index - 1].poChallanReport}',
+      );
     }
   }
 }
